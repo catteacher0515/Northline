@@ -62,7 +62,7 @@ struct ContainerHomeView: View {
     private var selectedModuleView: some View {
         switch selectedModule {
         case .timeInvestment:
-            TimeInvestmentDashboardView(viewModel: timeInvestmentViewModel)
+            TimeInvestmentModuleView(viewModel: timeInvestmentViewModel)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         case .stressManagement:
             PlaceholderModuleView(title: "压力管理", subtitle: "尚未启用")
