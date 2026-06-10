@@ -5,7 +5,21 @@ struct DailyTotals: Equatable {
     let consumptionSeconds: Int
 }
 
-struct TimeSessionStore {
+final class TimeSessionStore {
+    private var sessions: [TimeSession] = []
+
+    func append(_ session: TimeSession) {
+        sessions.append(session.normalizedForPersistence())
+    }
+
+    func allSessions() -> [TimeSession] {
+        sessions
+    }
+
+    func dailyTotals(now: Date, calendar: Calendar = .current) -> DailyTotals {
+        Self.dailyTotals(sessions: sessions, now: now, calendar: calendar)
+    }
+
     static func dailyTotals(
         sessions: [TimeSession],
         now: Date,

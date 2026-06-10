@@ -4,6 +4,12 @@ struct AppCoordinator: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        ContainerHomeView(selectedModuleID: appState.selectedModuleID)
+        ContainerHomeView(
+            selectedModule: appState.selectedModule,
+            onSelectModule: { module in
+                appState.selectedModule = module
+            },
+            timeInvestmentViewModel: appState.timeInvestmentViewModel
+        )
     }
 }
