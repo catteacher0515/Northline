@@ -5,12 +5,20 @@ struct TimeInvestmentModuleView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Picker("页面", selection: $viewModel.selectedTab) {
-                ForEach(TimeInvestmentTab.allCases) { tab in
-                    Text(tab.title).tag(tab)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("时间投入")
+                    .font(.largeTitle.weight(.semibold))
+
+                Text(viewModel.selectedTab == .record ? "开始、结束、即时裁决" : "看总账、趋势和最近产出")
+                    .foregroundStyle(.secondary)
+
+                Picker("页面", selection: $viewModel.selectedTab) {
+                    ForEach(TimeInvestmentTab.allCases) { tab in
+                        Text(tab.title).tag(tab)
+                    }
                 }
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.segmented)
 
             switch viewModel.selectedTab {
             case .record:
