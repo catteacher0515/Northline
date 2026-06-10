@@ -16,6 +16,13 @@ struct TimeInvestmentMenuBarView: View {
             } else {
                 idleSessionSection
             }
+
+            Divider()
+
+            SettingsLink {
+                Text("打开设置")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(16)
         .frame(width: 320)

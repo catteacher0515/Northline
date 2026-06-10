@@ -37,6 +37,15 @@ struct ContainerHomeView: View {
                     }
                 }
 
+                SettingsLink {
+                    ModuleCard(
+                        title: "设置",
+                        subtitle: "快捷键 / 默认参考时长",
+                        isSelected: false
+                    )
+                }
+                .buttonStyle(.plain)
+
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: 320, alignment: .leading)

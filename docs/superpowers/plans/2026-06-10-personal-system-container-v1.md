@@ -8,6 +8,8 @@
 
 **Tech Stack:** Swift 6, SwiftUI, AppKit, SwiftData, XCTest
 
+**Current environment note:** This repository is being developed under macOS Command Line Tools only. `swift build` works, but both `XCTest` and Swift's built-in `Testing` module are unavailable in this toolchain. Keep standard test files for full Xcode environments, and use `swift run PersonalSystem --self-check` as the local verification path until full Xcode is installed.
+
 ---
 
 ## File Structure
@@ -1372,4 +1374,3 @@ git commit -m "docs: finalize v1 implementation plan and verification notes"
 
 - `TimeSession`, `SessionClassification`, `TimeSessionStore`, `SessionTimer`, and `TimeInvestmentViewModel` names are used consistently across tasks.
 - `productionNote` is the only V1 note field and is consistently nullable.
-

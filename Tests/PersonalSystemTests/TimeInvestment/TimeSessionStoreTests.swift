@@ -50,4 +50,20 @@ final class TimeSessionStoreTests: XCTestCase {
         XCTAssertEqual(normalized.classification, .consumption)
         XCTAssertNil(normalized.productionNote)
     }
+
+    func testProductionNoteIsTrimmedWhenPersisted() {
+        let session = TimeSession(
+            startAt: Date(timeIntervalSince1970: 100),
+            endAt: Date(timeIntervalSince1970: 400),
+            referenceDurationSeconds: 1_500,
+            classification: .production,
+            productionNote: "  shipped dashboard copy  ",
+            endedByUser: true
+        )
+
+        let normalized = session.normalizedForPersistence()
+
+        XCTAssertEqual(normalized.classification, .production)
+        XCTAssertEqual(normalized.productionNote, "shipped dashboard copy")
+    }
 }

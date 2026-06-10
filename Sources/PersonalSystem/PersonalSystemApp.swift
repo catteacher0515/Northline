@@ -4,6 +4,12 @@ import SwiftUI
 struct PersonalSystemApp: App {
     @StateObject private var appState = AppState()
 
+    init() {
+        if CommandLine.arguments.contains("--self-check") {
+            TimeInvestmentSelfCheck.runAndExit()
+        }
+    }
+
     var body: some Scene {
         WindowGroup("Personal System") {
             AppCoordinator()

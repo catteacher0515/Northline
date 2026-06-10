@@ -56,7 +56,7 @@ struct TimeSession: Codable, Equatable {
             endAt: endAt,
             referenceDurationSeconds: referenceDurationSeconds,
             classification: .production,
-            productionNote: productionNote,
+            productionNote: note,
             endedByUser: endedByUser
         )
     }
