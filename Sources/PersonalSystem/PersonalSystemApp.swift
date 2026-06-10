@@ -8,6 +8,9 @@ struct PersonalSystemApp: App {
         WindowGroup("Personal System") {
             AppCoordinator()
                 .environmentObject(appState)
+                .task {
+                    appState.startHotkeyMonitoring()
+                }
         }
 
         MenuBarExtra {

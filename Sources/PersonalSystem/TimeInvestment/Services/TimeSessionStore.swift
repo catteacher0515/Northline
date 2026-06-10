@@ -6,10 +6,16 @@ struct DailyTotals: Equatable {
 }
 
 final class TimeSessionStore {
-    private var sessions: [TimeSession] = []
+    private static let sessionsFileName = "sessions.json"
+    private var sessions: [TimeSession]
+
+    init() {
+        sessions = LocalJSONStore.load([TimeSession].self, from: Self.sessionsFileName) ?? []
+    }
 
     func append(_ session: TimeSession) {
         sessions.append(session.normalizedForPersistence())
+        LocalJSONStore.save(sessions, to: Self.sessionsFileName)
     }
 
     func allSessions() -> [TimeSession] {

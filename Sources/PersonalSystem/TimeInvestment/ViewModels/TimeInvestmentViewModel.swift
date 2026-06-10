@@ -11,10 +11,12 @@ final class TimeInvestmentViewModel: ObservableObject {
 
     init(
         store: TimeSessionStore = TimeSessionStore(),
-        timer: SessionTimer = SessionTimer()
+        timer: SessionTimer = SessionTimer(),
+        referenceDurationSeconds: Int = 1_500
     ) {
         self.store = store
         self.timer = timer
+        self.timer.updateDefaultReferenceDurationSeconds(referenceDurationSeconds)
         isSessionRunning = timer.isRunning
     }
 
@@ -23,7 +25,12 @@ final class TimeInvestmentViewModel: ObservableObject {
     }
 
     var referenceDurationSeconds: Int {
-        timer.referenceDurationSeconds
+        timer.defaultReferenceDurationSeconds
+    }
+
+    func updateReferenceDurationSeconds(_ seconds: Int) {
+        timer.updateDefaultReferenceDurationSeconds(seconds)
+        objectWillChange.send()
     }
 
     func startSession(now: Date = Date()) {

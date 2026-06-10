@@ -8,18 +8,25 @@ struct SessionTimerSnapshot: Equatable {
 
 final class SessionTimer {
     private(set) var activeStartAt: Date?
-    let referenceDurationSeconds: Int
+    private(set) var activeReferenceDurationSeconds: Int
+    private(set) var defaultReferenceDurationSeconds: Int
 
     init(referenceDurationSeconds: Int = 1_500) {
-        self.referenceDurationSeconds = referenceDurationSeconds
+        self.defaultReferenceDurationSeconds = referenceDurationSeconds
+        self.activeReferenceDurationSeconds = referenceDurationSeconds
     }
 
     var isRunning: Bool {
         activeStartAt != nil
     }
 
+    func updateDefaultReferenceDurationSeconds(_ seconds: Int) {
+        defaultReferenceDurationSeconds = seconds
+    }
+
     func start(at now: Date = Date()) {
         activeStartAt = now
+        activeReferenceDurationSeconds = defaultReferenceDurationSeconds
     }
 
     func stop(at now: Date = Date()) -> SessionTimerSnapshot? {
@@ -31,7 +38,7 @@ final class SessionTimer {
         return SessionTimerSnapshot(
             startAt: startAt,
             endAt: now,
-            referenceDurationSeconds: referenceDurationSeconds
+            referenceDurationSeconds: activeReferenceDurationSeconds
         )
     }
 

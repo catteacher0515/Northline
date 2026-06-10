@@ -1,6 +1,6 @@
 import Foundation
 
-struct TimeSession: Equatable {
+struct TimeSession: Codable, Equatable {
     var id: UUID
     var startAt: Date
     var endAt: Date

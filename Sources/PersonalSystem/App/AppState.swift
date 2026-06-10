@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 
@@ -12,7 +13,50 @@ enum AppModule: String, CaseIterable, Identifiable {
 @MainActor
 final class AppState: ObservableObject {
     @Published var selectedModule: AppModule = .timeInvestment
-    @Published var launchAtLoginEnabled: Bool = false
+    @Published var settings: AppSettings {
+        didSet {
+            LocalJSONStore.save(settings, to: Self.settingsFileName)
+            timeInvestmentViewModel.updateReferenceDurationSeconds(settings.referenceDurationSeconds)
+        }
+    }
 
-    let timeInvestmentViewModel = TimeInvestmentViewModel()
+    let timeInvestmentViewModel: TimeInvestmentViewModel
+
+    private let hotkeyMonitor = GlobalHotkeyMonitor()
+    private static let settingsFileName = "settings.json"
+
+    init() {
+        let settings = LocalJSONStore.load(AppSettings.self, from: Self.settingsFileName) ?? .default
+        self.settings = settings
+        self.timeInvestmentViewModel = TimeInvestmentViewModel(
+            referenceDurationSeconds: settings.referenceDurationSeconds
+        )
+    }
+
+    func startHotkeyMonitoring() {
+        hotkeyMonitor.start(
+            shortcutProvider: { [weak self] in
+                self?.settings.startEndShortcut ?? AppSettings.default.startEndShortcut
+            },
+            action: { [weak self] in
+                self?.handleStartEndShortcut()
+            }
+        )
+    }
+
+    func updateStartEndShortcut(_ shortcut: KeyboardShortcut) {
+        settings.startEndShortcut = shortcut
+    }
+
+    private func handleStartEndShortcut() {
+        selectedModule = .timeInvestment
+
+        if timeInvestmentViewModel.isSessionRunning {
+            timeInvestmentViewModel.requestEndSession()
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows.forEach { $0.makeKeyAndOrderFront(nil) }
+        } else {
+            timeInvestmentViewModel.startSession()
+        }
+    }
 }
