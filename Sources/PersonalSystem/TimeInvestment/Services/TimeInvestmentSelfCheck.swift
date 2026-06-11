@@ -9,6 +9,7 @@ enum TimeInvestmentSelfCheck {
             try verifyReviewRangeBoundaries()
             try verifyReviewSnapshotAggregation()
             try verifyReviewViewModelState()
+            try verifyStressManagementDomain()
             try verifyLocalPersistenceRoundTrip()
             print("TimeInvestment self-check passed")
             Darwin.exit(0)
@@ -172,6 +173,12 @@ enum TimeInvestmentSelfCheck {
             try expect(snapshot.summary.productionSeconds == 3_600, "review snapshot should come from the injected store")
             try expect(snapshot.range == .today, "review snapshot should preserve the selected range")
         }
+    }
+
+    private static func verifyStressManagementDomain() throws {
+        try expect(StressResetQuestion.allCases.count == 10, "stress reset should expose 10 checklist questions")
+        try expect(StressMeasurementQuestion.allCases.count == 5, "stress measurement should expose 5 monthly questions")
+        try expect(StressResetLevel.first.priority < StressResetLevel.second.priority, "reset levels should preserve recovery order")
     }
 
     private static func verifyLocalPersistenceRoundTrip() throws {
