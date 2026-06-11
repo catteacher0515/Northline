@@ -21,6 +21,7 @@ final class AppState: ObservableObject {
     }
 
     let timeInvestmentViewModel: TimeInvestmentViewModel
+    let stressManagementViewModel: StressManagementViewModel
 
     private let hotkeyMonitor = GlobalHotkeyMonitor()
     private static let settingsFileName = "settings.json"
@@ -31,6 +32,7 @@ final class AppState: ObservableObject {
         self.timeInvestmentViewModel = TimeInvestmentViewModel(
             referenceDurationSeconds: settings.referenceDurationSeconds
         )
+        self.stressManagementViewModel = StressManagementViewModel()
     }
 
     func startHotkeyMonitoring() {

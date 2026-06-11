@@ -4,10 +4,11 @@ struct ContainerHomeView: View {
     let selectedModule: AppModule
     let onSelectModule: (AppModule) -> Void
     @ObservedObject var timeInvestmentViewModel: TimeInvestmentViewModel
+    @ObservedObject var stressManagementViewModel: StressManagementViewModel
 
     private let modules: [(id: AppModule, title: String, subtitle: String)] = [
         (.timeInvestment, "时间投入", "今日生产 / 今日消费"),
-        (.stressManagement, "压力管理", "尚未启用"),
+        (.stressManagement, "压力管理", "即时重置 / 压力测量"),
         (.goalClarity, "目标清晰化", "尚未启用")
     ]
 
@@ -65,7 +66,7 @@ struct ContainerHomeView: View {
             TimeInvestmentModuleView(viewModel: timeInvestmentViewModel)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         case .stressManagement:
-            PlaceholderModuleView(title: "压力管理", subtitle: "尚未启用")
+            StressManagementModuleView(viewModel: stressManagementViewModel)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         case .goalClarity:
             PlaceholderModuleView(title: "目标清晰化", subtitle: "尚未启用")
