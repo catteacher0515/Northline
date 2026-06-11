@@ -9,6 +9,9 @@ enum TimeInvestmentSelfCheck {
             try verifyReviewRangeBoundaries()
             try verifyReviewSnapshotAggregation()
             try verifyReviewViewModelState()
+            try verifyStressManagementDomain()
+            try verifyStressManagementStore()
+            try verifyStressManagementViewModel()
             try verifyLocalPersistenceRoundTrip()
             print("TimeInvestment self-check passed")
             Darwin.exit(0)
@@ -171,6 +174,65 @@ enum TimeInvestmentSelfCheck {
             try expect(viewModel.selectedTab == .review, "tab selection should persist")
             try expect(snapshot.summary.productionSeconds == 3_600, "review snapshot should come from the injected store")
             try expect(snapshot.range == .today, "review snapshot should preserve the selected range")
+        }
+    }
+
+    private static func verifyStressManagementDomain() throws {
+        try expect(StressResetQuestion.allCases.count == 10, "stress reset should expose 10 checklist questions")
+        try expect(StressMeasurementQuestion.allCases.count == 5, "stress measurement should expose 5 monthly questions")
+        try expect(StressResetLevel.first.priority < StressResetLevel.second.priority, "reset levels should preserve recovery order")
+    }
+
+    private static func verifyStressManagementStore() throws {
+        let resetAnswers = [
+            1: true,
+            2: false,
+            3: false,
+            4: true,
+            5: true,
+            6: false,
+            7: false,
+            8: false,
+            9: false,
+            10: false
+        ]
+
+        let firstMatch = StressManagementStore.matchedResetLevel(for: resetAnswers)
+        try expect(firstMatch == .first, "store should return the earliest matched reset level")
+
+        let noMatch = StressManagementStore.matchedResetLevel(
+            for: Dictionary(uniqueKeysWithValues: (1...10).map { ($0, false) })
+        )
+        try expect(noMatch == nil, "store should return nil when no reset layer is hit")
+
+        let measurement = StressMeasurementRecord(scores: [1: 4, 2: 3, 3: 3, 4: 2, 5: 4])
+        try expect(measurement.totalScore == 16, "measurement should sum all item scores")
+        try expect(measurement.pressureLevel == .high, "measurement should map total score to a pressure level")
+    }
+
+    private static func verifyStressManagementViewModel() throws {
+        try MainActor.assumeIsolated {
+            let store = StressManagementStore()
+            let viewModel = StressManagementViewModel(store: store)
+
+            try expect(viewModel.page == .home, "stress module should default to home")
+
+            viewModel.startResetChecklist()
+            viewModel.updateResetAnswer(for: .q1, value: true)
+            viewModel.submitResetChecklist(now: Date(timeIntervalSince1970: 1_718_100_000))
+
+            try expect(viewModel.page == .resetResult, "submitting reset checklist should move to result page")
+            try expect(viewModel.currentResetRecord?.matchedResetLevel == .first, "view model should keep the matched reset result")
+
+            viewModel.startMeasurement()
+            viewModel.updateMeasurementScore(for: .q1, value: 4)
+            viewModel.updateMeasurementScore(for: .q2, value: 4)
+            viewModel.updateMeasurementScore(for: .q3, value: 3)
+            viewModel.updateMeasurementScore(for: .q4, value: 2)
+            viewModel.updateMeasurementScore(for: .q5, value: 3)
+            viewModel.submitMeasurement(now: Date(timeIntervalSince1970: 1_718_100_100))
+
+            try expect(viewModel.latestMeasurementRecord?.totalScore == 16, "view model should persist measurement scores")
         }
     }
 

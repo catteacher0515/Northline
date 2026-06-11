@@ -9,7 +9,8 @@ struct AppCoordinator: View {
             onSelectModule: { module in
                 appState.selectedModule = module
             },
-            timeInvestmentViewModel: appState.timeInvestmentViewModel
+            timeInvestmentViewModel: appState.timeInvestmentViewModel,
+            stressManagementViewModel: appState.stressManagementViewModel
         )
     }
 }
