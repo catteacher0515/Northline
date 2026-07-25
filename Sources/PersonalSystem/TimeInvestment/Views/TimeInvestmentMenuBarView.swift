@@ -314,18 +314,16 @@ struct TimeInvestmentMenuBarView: View {
 
             switch reviewScope {
             case .day:
-                DatePicker("选择日期", selection: $selectedDay, displayedComponents: .date)
-                    .datePickerStyle(.compact)
+                ScrapbookDateStepper(title: "选择日期", date: $selectedDay)
             case .last7Days:
                 Text("展示包含今天在内的最近 7 天。")
                     .font(.caption)
                     .foregroundStyle(ScrapbookPalette.mutedInk)
             case .custom:
                 HStack {
-                    DatePicker("开始", selection: $customStartDate, displayedComponents: .date)
-                    DatePicker("结束", selection: $customEndDate, displayedComponents: .date)
+                    ScrapbookDateStepper(title: "开始", date: $customStartDate)
+                    ScrapbookDateStepper(title: "结束", date: $customEndDate)
                 }
-                .datePickerStyle(.compact)
             }
         }
         .padding(12)
@@ -635,6 +633,55 @@ private struct SunSticker: View {
             }
             .stroke(ScrapbookPalette.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
         }
+    }
+}
+
+private struct ScrapbookDateStepper: View {
+    let title: String
+    @Binding var date: Date
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(ScrapbookPalette.ink)
+
+            Button {
+                shiftDay(-1)
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.caption2.weight(.bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(ScrapbookPalette.ink)
+
+            Text(date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+                .font(.caption.monospacedDigit().weight(.bold))
+                .foregroundStyle(ScrapbookPalette.ink)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(ScrapbookPalette.whitePaper.opacity(0.86))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(ScrapbookPalette.ink.opacity(0.38), lineWidth: 1.2)
+                        }
+                }
+
+            Button {
+                shiftDay(1)
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(ScrapbookPalette.ink)
+        }
+    }
+
+    private func shiftDay(_ value: Int) {
+        date = Calendar.current.date(byAdding: .day, value: value, to: date) ?? date
     }
 }
 
