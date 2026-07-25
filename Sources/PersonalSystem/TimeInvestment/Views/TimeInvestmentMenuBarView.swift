@@ -48,6 +48,7 @@ struct TimeInvestmentMenuBarView: View {
     private var recordPage: some View {
         VStack(alignment: .leading, spacing: 14) {
             header(showReviewButton: true)
+            recordSummaryStrip
 
             if viewModel.isSessionRunning {
                 if isEndingSession {
@@ -68,11 +69,18 @@ struct TimeInvestmentMenuBarView: View {
         }
     }
 
+    private var recordSummaryStrip: some View {
+        HStack(spacing: 10) {
+            MetricPill(title: "今日记录", value: DurationFormatter.formatted(recordedSecondsToday()))
+            MetricPill(title: "覆盖率", value: "\(coveragePercentToday())%")
+        }
+    }
+
     private func header(showReviewButton: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Time Mate")
-                    .font(.headline.weight(.semibold))
+                    .font(.system(.headline, design: .rounded).weight(.bold))
                 Spacer()
                 if showReviewButton {
                     Button("回顾") {
@@ -111,7 +119,7 @@ struct TimeInvestmentMenuBarView: View {
             .tint(.red.opacity(0.82))
         }
         .padding(14)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var idleSessionSection: some View {
@@ -130,7 +138,7 @@ struct TimeInvestmentMenuBarView: View {
             .tint(.green.opacity(0.76))
         }
         .padding(14)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var endSessionForm: some View {
@@ -169,7 +177,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(14)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private func scoreSlider(title: String, value: Binding<Double>) -> some View {
@@ -198,12 +206,18 @@ struct TimeInvestmentMenuBarView: View {
                 ForEach(slots.indices, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(slots[index].map(color(for:)) ?? Color.secondary.opacity(0.12))
-                        .frame(height: 18)
+                        .frame(height: 22)
+                        .overlay(alignment: .top) {
+                            Color.white.opacity(slots[index] == nil ? 0.02 : 0.12)
+                                .frame(height: 1)
+                        }
                 }
             }
+            .padding(7)
+            .background(TimeRailBackground())
         }
         .padding(12)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var recentConfirmation: some View {
@@ -228,7 +242,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var reviewPage: some View {
@@ -236,7 +250,7 @@ struct TimeInvestmentMenuBarView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("记录回顾")
-                        .font(.title2.weight(.semibold))
+                        .font(.system(.title2, design: .rounded).weight(.bold))
                     Text("按天或按时间范围看过去的色块。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -256,8 +270,22 @@ struct TimeInvestmentMenuBarView: View {
             }
 
             reviewControls
+            reviewSummaryStrip
             reviewColorBlocks
             reviewRecordList
+        }
+    }
+
+    private var reviewSummaryStrip: some View {
+        let records = reviewRangeSessions()
+        let roundedSeconds = records.reduce(0) { $0 + $1.roundedSeconds }
+        let dayCount = max(1, reviewDays().count)
+        let coverage = min(100, Int((Double(roundedSeconds) / Double(dayCount * 24 * 60 * 60) * 100).rounded()))
+
+        return HStack(spacing: 10) {
+            MetricPill(title: "范围记录", value: DurationFormatter.formatted(roundedSeconds))
+            MetricPill(title: "覆盖率", value: "\(coverage)%")
+            MetricPill(title: "记录数", value: "\(records.count)")
         }
     }
 
@@ -287,7 +315,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var reviewColorBlocks: some View {
@@ -323,7 +351,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private var reviewRecordList: some View {
@@ -349,7 +377,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(MenuPanelBackground())
+        .background(TimeGlassPanel(cornerRadius: 18))
     }
 
     private func saveEndedSession() {
@@ -375,6 +403,14 @@ struct TimeInvestmentMenuBarView: View {
 
     private func todaySlots() -> [TimeSessionCategory?] {
         slots(for: Date())
+    }
+
+    private func recordedSecondsToday() -> Int {
+        viewModel.todaySessions().reduce(0) { $0 + $1.roundedSeconds }
+    }
+
+    private func coveragePercentToday() -> Int {
+        min(100, Int((Double(recordedSecondsToday()) / Double(24 * 60 * 60) * 100).rounded()))
     }
 
     private func slots(for day: Date) -> [TimeSessionCategory?] {
@@ -489,10 +525,66 @@ struct TimeInvestmentMenuBarView: View {
     }
 }
 
-private struct MenuPanelBackground: View {
+private struct TimeGlassPanel: View {
+    var cornerRadius: CGFloat = 18
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(Color.secondary.opacity(0.08))
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.105),
+                        Color.white.opacity(0.055)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.18),
+                                Color.white.opacity(0.055)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 12)
+    }
+}
+
+private struct TimeRailBackground: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
+            .fill(Color.black.opacity(0.22))
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+            }
+    }
+}
+
+private struct MetricPill: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.monospacedDigit().weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(TimeGlassPanel(cornerRadius: 14))
     }
 }
 
@@ -535,9 +627,15 @@ private struct DayBlockRow: View {
                 ForEach(slots.indices, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                         .fill(slots[index].map(colorForCategory) ?? Color.secondary.opacity(0.12))
-                        .frame(height: 18)
+                        .frame(height: 20)
+                        .overlay(alignment: .top) {
+                            Color.white.opacity(slots[index] == nil ? 0.02 : 0.10)
+                                .frame(height: 1)
+                        }
                 }
             }
+            .padding(6)
+            .background(TimeRailBackground())
         }
     }
 }
