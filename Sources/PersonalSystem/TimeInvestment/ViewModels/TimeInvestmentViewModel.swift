@@ -96,8 +96,12 @@ final class TimeInvestmentViewModel: ObservableObject {
     }
 
     func todaySessions(now: Date = Date(), calendar: Calendar = .current) -> [TimeSession] {
+        sessions(on: now, calendar: calendar)
+    }
+
+    func sessions(on date: Date, calendar: Calendar = .current) -> [TimeSession] {
         store.allSessions()
-            .filter { DayBoundary.isSameLocalDay($0.startAt, now, calendar: calendar) }
+            .filter { DayBoundary.isSameLocalDay($0.startAt, date, calendar: calendar) }
             .sorted { $0.startAt < $1.startAt }
     }
 

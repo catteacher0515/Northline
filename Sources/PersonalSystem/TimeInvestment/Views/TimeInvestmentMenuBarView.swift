@@ -10,6 +10,7 @@ struct TimeInvestmentMenuBarView: View {
     @State private var joyScore = 6.0
     @State private var meaningScore = 6.0
     @State private var note = ""
+    @State private var recordScope: RecordScope = .today
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -26,7 +27,7 @@ struct TimeInvestmentMenuBarView: View {
             }
 
             todayTimeline
-            recentRecords
+            recordReview
 
             Text("快捷键可在 Time Mate 设置中调整。")
                 .font(.caption2)
@@ -175,35 +176,39 @@ struct TimeInvestmentMenuBarView: View {
         .background(MenuPanelBackground())
     }
 
-    private var recentRecords: some View {
+    private var recordReview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("最近记录")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("记录回顾")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-            let records = viewModel.recentSessions(limit: 3)
+                Spacer()
+
+                Picker("记录范围", selection: $recordScope) {
+                    ForEach(RecordScope.allCases) { scope in
+                        Text(scope.title).tag(scope)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: 118)
+            }
+
+            let records = reviewRecords()
             if records.isEmpty {
-                Text("还没有记录。")
+                Text(recordScope == .today ? "今天还没有记录。" : "还没有记录。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(records, id: \.id) { session in
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(color(for: session.category))
-                            .frame(width: 8, height: 8)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(session.taskName ?? "未命名")
-                                .font(.caption.weight(.semibold))
-                            Text("\(DurationFormatter.formatted(session.roundedSeconds)) · 快 \(session.joyScore ?? 6) · 义 \(session.meaningScore ?? 6)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(records, id: \.id) { session in
+                            RecordRow(session: session, color: color(for: session.category))
                         }
-
-                        Spacer()
                     }
                 }
+                .frame(maxHeight: 178)
             }
         }
         .padding(12)
@@ -229,6 +234,15 @@ struct TimeInvestmentMenuBarView: View {
         meaningScore = 6
         note = ""
         endedAt = Date()
+    }
+
+    private func reviewRecords() -> [TimeSession] {
+        switch recordScope {
+        case .today:
+            return viewModel.todaySessions()
+        case .all:
+            return viewModel.recentSessions(limit: 30)
+        }
     }
 
     private func todaySlots() -> [TimeSessionCategory?] {
@@ -274,5 +288,65 @@ private struct MenuPanelBackground: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color.secondary.opacity(0.08))
+    }
+}
+
+private enum RecordScope: String, CaseIterable, Identifiable {
+    case today
+    case all
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .today:
+            return "今日"
+        case .all:
+            return "全部"
+        }
+    }
+}
+
+private struct RecordRow: View {
+    let session: TimeSession
+    let color: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(session.taskName ?? "未命名")
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    Text(timeRange)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("\(session.category.title) · \(DurationFormatter.formatted(session.roundedSeconds)) · 快 \(session.joyScore ?? 6) · 义 \(session.meaningScore ?? 6)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                if let note = session.note, note.isEmpty == false {
+                    Text(note)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    private var timeRange: String {
+        "\(session.startAt.formatted(date: .omitted, time: .shortened))-\(session.endAt.formatted(date: .omitted, time: .shortened))"
     }
 }

@@ -102,4 +102,43 @@ final class TimeSessionStoreTests: XCTestCase {
         XCTAssertEqual(normalized.meaningScore, 1)
         XCTAssertNil(normalized.note)
     }
+
+    @MainActor
+    func testViewModelReturnsSessionsForSelectedDay() {
+        let calendar = Calendar(identifier: .gregorian)
+        let targetDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: targetDay) ?? targetDay
+
+        let todaySession = TimeSession(
+            startAt: targetDay.addingTimeInterval(9 * 3_600),
+            endAt: targetDay.addingTimeInterval(10 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "学习",
+            category: .studyWork,
+            joyScore: 7,
+            meaningScore: 9,
+            note: nil,
+            endedByUser: true
+        )
+        let oldSession = TimeSession(
+            startAt: previousDay.addingTimeInterval(21 * 3_600),
+            endAt: previousDay.addingTimeInterval(22 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "刷视频",
+            category: .entertainment,
+            joyScore: 5,
+            meaningScore: 2,
+            note: nil,
+            endedByUser: true
+        )
+        let viewModel = TimeInvestmentViewModel(
+            store: InMemoryTimeSessionStore(seedSessions: [oldSession, todaySession]),
+            timer: SessionTimer(),
+            referenceDurationSeconds: 1_500
+        )
+
+        let result = viewModel.sessions(on: targetDay, calendar: calendar)
+
+        XCTAssertEqual(result.map { $0.taskName }, ["学习"])
+    }
 }
