@@ -133,6 +133,7 @@ struct TimeInvestmentMenuBarView: View {
                 Text(DurationFormatter.formatted(viewModel.elapsedSeconds(now: context.date)))
                     .font(.system(size: 34, weight: .semibold, design: .rounded))
                     .monospacedDigit()
+                    .foregroundStyle(ScrapbookPalette.ink)
             }
 
             Button {
@@ -192,7 +193,11 @@ struct TimeInvestmentMenuBarView: View {
                 ScrapbookTimeStepper(title: "结束", date: $manualEndAt)
             }
 
-            TextField("任务名，例如：通勤、开会、睡觉", text: $manualTaskName)
+            TextField(
+                "",
+                text: $manualTaskName,
+                prompt: Text("任务名，例如：通勤、开会、睡觉").foregroundStyle(ScrapbookPalette.ink)
+            )
                 .scrapbookTextField()
 
             categoryMenu(title: "分类", selection: $manualCategory)
@@ -200,7 +205,7 @@ struct TimeInvestmentMenuBarView: View {
             scoreSlider(title: "快乐值", value: $manualJoyScore)
             scoreSlider(title: "意义值", value: $manualMeaningScore)
 
-            TextField("备注，可选", text: $manualNote)
+            TextField("", text: $manualNote, prompt: Text("备注，可选").foregroundStyle(ScrapbookPalette.ink))
                 .scrapbookTextField()
 
             HStack {
@@ -234,7 +239,11 @@ struct TimeInvestmentMenuBarView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(ScrapbookPalette.ink)
 
-            TextField("任务名，例如：学习、吃饭、刷视频", text: $taskName)
+            TextField(
+                "",
+                text: $taskName,
+                prompt: Text("任务名，例如：学习、吃饭、刷视频").foregroundStyle(ScrapbookPalette.ink)
+            )
                 .scrapbookTextField()
 
             categoryMenu(title: "分类", selection: $selectedCategory)
@@ -242,7 +251,7 @@ struct TimeInvestmentMenuBarView: View {
             scoreSlider(title: "快乐值", value: $joyScore)
             scoreSlider(title: "意义值", value: $meaningScore)
 
-            TextField("备注，可选", text: $note)
+            TextField("", text: $note, prompt: Text("备注，可选").foregroundStyle(ScrapbookPalette.ink))
                 .scrapbookTextField()
 
             HStack {
@@ -292,24 +301,33 @@ struct TimeInvestmentMenuBarView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(ScrapbookPalette.ink)
 
-            Picker(title, selection: selection) {
+            Menu {
                 ForEach(TimeSessionCategory.allCases) { category in
-                    Text(category.title).tag(category)
+                    Button(category.title) {
+                        selection.wrappedValue = category
+                    }
                 }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .tint(ScrapbookPalette.ink)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(ScrapbookPalette.whitePaper.opacity(0.9))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .strokeBorder(ScrapbookPalette.ink.opacity(0.34), lineWidth: 1.2)
+            } label: {
+                HStack(spacing: 8) {
+                    Text(selection.wrappedValue.title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(ScrapbookPalette.ink)
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(ScrapbookPalette.ink)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(ScrapbookPalette.whitePaper.opacity(0.9))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(ScrapbookPalette.ink.opacity(0.34), lineWidth: 1.2)
+                        }
                     }
             }
+            .buttonStyle(.plain)
         }
     }
 
