@@ -5,13 +5,15 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleExecutable</key>
-  <string>PersonalSystem</string>
+  <string>TimeMate</string>
+  <key>CFBundleDisplayName</key>
+  <string>Time Mate</string>
   <key>CFBundleIdentifier</key>
-  <string>com.awesome-mac.PersonalSystem</string>
+  <string>com.awesome-mac.TimeMate</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>
-  <string>PersonalSystem</string>
+  <string>Time Mate</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

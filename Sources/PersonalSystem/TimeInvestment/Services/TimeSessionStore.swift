@@ -5,6 +5,11 @@ struct DailyTotals: Equatable {
     let consumptionSeconds: Int
 }
 
+struct TimeSessionHistorySummary: Equatable {
+    let totalCount: Int
+    let latestEndAt: Date?
+}
+
 final class TimeSessionStore {
     private static let sessionsFileName = "sessions.json"
     private var sessions: [TimeSession]
@@ -24,6 +29,10 @@ final class TimeSessionStore {
 
     func dailyTotals(now: Date, calendar: Calendar = .current) -> DailyTotals {
         Self.dailyTotals(sessions: sessions, now: now, calendar: calendar)
+    }
+
+    func historySummary() -> TimeSessionHistorySummary {
+        Self.historySummary(sessions: sessions)
     }
 
     func reviewSnapshot(
@@ -52,6 +61,14 @@ final class TimeSessionStore {
         return DailyTotals(
             productionSeconds: productionSeconds,
             consumptionSeconds: consumptionSeconds
+        )
+    }
+
+    static func historySummary(sessions: [TimeSession]) -> TimeSessionHistorySummary {
+        let latestEndAt = sessions.max(by: { $0.endAt < $1.endAt })?.endAt
+        return TimeSessionHistorySummary(
+            totalCount: sessions.count,
+            latestEndAt: latestEndAt
         )
     }
 

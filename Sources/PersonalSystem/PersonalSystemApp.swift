@@ -11,13 +11,15 @@ struct PersonalSystemApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Personal System") {
+        WindowGroup("Time Mate") {
             AppCoordinator()
                 .environmentObject(appState)
                 .task {
                     appState.startHotkeyMonitoring()
                 }
         }
+        .defaultSize(width: 390, height: 650)
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             TimeInvestmentMenuBarView(viewModel: appState.timeInvestmentViewModel)
@@ -37,7 +39,7 @@ private struct TimeInvestmentMenuBarLabel: View {
     @ObservedObject var viewModel: TimeInvestmentViewModel
 
     var body: some View {
-        Text(viewModel.isSessionRunning ? "●" : "○")
-            .font(.system(size: 14, weight: .bold, design: .monospaced))
+        Text(viewModel.isSessionRunning ? "TM ●" : "TM ○")
+            .font(.system(size: 12, weight: .bold, design: .rounded))
     }
 }

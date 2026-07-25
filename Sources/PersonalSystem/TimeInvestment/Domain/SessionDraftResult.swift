@@ -1,15 +1,36 @@
 import Foundation
 
 struct SessionDraftResult: Equatable {
-    let classification: SessionClassification
-    let productionNote: String?
+    let taskName: String
+    let category: TimeSessionCategory?
+    let joyScore: Int?
+    let meaningScore: Int?
+    let note: String?
+
+    init(
+        taskName: String,
+        category: TimeSessionCategory? = nil,
+        joyScore: Int? = nil,
+        meaningScore: Int? = nil,
+        note: String? = nil
+    ) {
+        self.taskName = taskName
+        self.category = category
+        self.joyScore = joyScore
+        self.meaningScore = meaningScore
+        self.note = note
+    }
 
     static func production(note: String) -> SessionDraftResult {
-        SessionDraftResult(classification: .production, productionNote: note)
+        SessionDraftResult(
+            taskName: note.isEmpty ? "生产" : note,
+            category: .studyWork,
+            note: note
+        )
     }
 
     static var consumption: SessionDraftResult {
-        SessionDraftResult(classification: .consumption, productionNote: nil)
+        SessionDraftResult(taskName: "消费", category: .other)
     }
 
     func makeSession(
@@ -17,13 +38,18 @@ struct SessionDraftResult: Equatable {
         endAt: Date,
         referenceDurationSeconds: Int
     ) -> TimeSession {
-        TimeSession(
+        let trimmedTaskName = taskName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCategory = category ?? TimeSessionCategory.classify(taskName: trimmedTaskName)
+        return TimeSession(
             startAt: startAt,
             endAt: endAt,
             referenceDurationSeconds: referenceDurationSeconds,
-            classification: classification,
-            productionNote: productionNote,
+            taskName: trimmedTaskName,
+            category: resolvedCategory,
+            joyScore: joyScore,
+            meaningScore: meaningScore,
+            note: note,
             endedByUser: true
-        )
+        ).normalizedForPersistence()
     }
 }

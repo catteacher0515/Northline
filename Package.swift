@@ -9,7 +9,7 @@ let package = Package(
     ],
     products: [
         .executable(
-            name: "PersonalSystem",
+            name: "TimeMate",
             targets: ["PersonalSystem"]
         )
     ],

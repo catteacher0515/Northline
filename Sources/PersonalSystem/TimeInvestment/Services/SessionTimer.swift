@@ -1,5 +1,10 @@
 import Foundation
 
+struct ActiveSessionState: Codable, Equatable {
+    let startAt: Date
+    let referenceDurationSeconds: Int
+}
+
 struct SessionTimerSnapshot: Equatable {
     let startAt: Date
     let endAt: Date
@@ -29,6 +34,11 @@ final class SessionTimer {
         activeReferenceDurationSeconds = defaultReferenceDurationSeconds
     }
 
+    func restore(from state: ActiveSessionState) {
+        activeStartAt = state.startAt
+        activeReferenceDurationSeconds = state.referenceDurationSeconds
+    }
+
     func stop(at now: Date = Date()) -> SessionTimerSnapshot? {
         guard let startAt = activeStartAt else {
             return nil
@@ -38,6 +48,17 @@ final class SessionTimer {
         return SessionTimerSnapshot(
             startAt: startAt,
             endAt: now,
+            referenceDurationSeconds: activeReferenceDurationSeconds
+        )
+    }
+
+    var activeState: ActiveSessionState? {
+        guard let activeStartAt else {
+            return nil
+        }
+
+        return ActiveSessionState(
+            startAt: activeStartAt,
             referenceDurationSeconds: activeReferenceDurationSeconds
         )
     }

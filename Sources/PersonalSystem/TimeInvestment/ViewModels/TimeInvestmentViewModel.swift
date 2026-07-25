@@ -19,7 +19,9 @@ enum TimeInvestmentTab: String, CaseIterable, Identifiable {
 
 protocol TimeSessionStoreProviding {
     func append(_ session: TimeSession)
+    func allSessions() -> [TimeSession]
     func dailyTotals(now: Date, calendar: Calendar) -> DailyTotals
+    func historySummary() -> TimeSessionHistorySummary
     func reviewSnapshot(range: ReviewRange, now: Date, calendar: Calendar) -> ReviewSnapshot
 }
 
@@ -36,8 +38,16 @@ final class InMemoryTimeSessionStore: TimeSessionStoreProviding {
         sessions.append(session)
     }
 
+    func allSessions() -> [TimeSession] {
+        sessions
+    }
+
     func dailyTotals(now: Date, calendar: Calendar) -> DailyTotals {
         TimeSessionStore.dailyTotals(sessions: sessions, now: now, calendar: calendar)
+    }
+
+    func historySummary() -> TimeSessionHistorySummary {
+        TimeSessionStore.historySummary(sessions: sessions)
     }
 
     func reviewSnapshot(range: ReviewRange, now: Date, calendar: Calendar) -> ReviewSnapshot {
@@ -47,6 +57,8 @@ final class InMemoryTimeSessionStore: TimeSessionStoreProviding {
 
 @MainActor
 final class TimeInvestmentViewModel: ObservableObject {
+    private static let activeSessionFileName = "active-time-session.json"
+
     @Published private(set) var isSessionRunning = false
     @Published var isPresentingEndSessionSheet = false
     @Published var selectedTab: TimeInvestmentTab = .record
@@ -63,6 +75,7 @@ final class TimeInvestmentViewModel: ObservableObject {
         self.store = store
         self.timer = timer
         self.timer.updateDefaultReferenceDurationSeconds(referenceDurationSeconds)
+        restoreActiveSessionIfNeeded()
         isSessionRunning = timer.isRunning
     }
 
@@ -72,6 +85,28 @@ final class TimeInvestmentViewModel: ObservableObject {
 
     var referenceDurationSeconds: Int {
         timer.defaultReferenceDurationSeconds
+    }
+
+    var historySummary: TimeSessionHistorySummary {
+        store.historySummary()
+    }
+
+    var allSessions: [TimeSession] {
+        store.allSessions()
+    }
+
+    func todaySessions(now: Date = Date(), calendar: Calendar = .current) -> [TimeSession] {
+        store.allSessions()
+            .filter { DayBoundary.isSameLocalDay($0.startAt, now, calendar: calendar) }
+            .sorted { $0.startAt < $1.startAt }
+    }
+
+    func recentSessions(limit: Int = 3) -> [TimeSession] {
+        Array(
+            store.allSessions()
+                .sorted { $0.endAt > $1.endAt }
+                .prefix(limit)
+        )
     }
 
     func updateReferenceDurationSeconds(_ seconds: Int) {
@@ -85,6 +120,7 @@ final class TimeInvestmentViewModel: ObservableObject {
         }
 
         timer.start(at: now)
+        persistActiveSession()
         isSessionRunning = timer.isRunning
     }
 
@@ -115,6 +151,7 @@ final class TimeInvestmentViewModel: ObservableObject {
             .normalizedForPersistence()
 
         store.append(session)
+        clearPersistedActiveSession()
         isPresentingEndSessionSheet = false
         isSessionRunning = timer.isRunning
         objectWillChange.send()
@@ -130,5 +167,25 @@ final class TimeInvestmentViewModel: ObservableObject {
 
     func elapsedSeconds(now: Date = Date()) -> Int {
         timer.elapsedSeconds(now: now)
+    }
+
+    private func restoreActiveSessionIfNeeded() {
+        guard let activeSession = LocalJSONStore.load(ActiveSessionState.self, from: Self.activeSessionFileName) else {
+            return
+        }
+
+        timer.restore(from: activeSession)
+    }
+
+    private func persistActiveSession() {
+        guard let activeState = timer.activeState else {
+            return
+        }
+
+        LocalJSONStore.save(activeState, to: Self.activeSessionFileName)
+    }
+
+    private func clearPersistedActiveSession() {
+        LocalJSONStore.delete(Self.activeSessionFileName)
     }
 }

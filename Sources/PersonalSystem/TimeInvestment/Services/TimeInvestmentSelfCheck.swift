@@ -6,6 +6,8 @@ enum TimeInvestmentSelfCheck {
         do {
             try verifyDailyTotals()
             try verifyProductionNoteNormalization()
+            try verifyHistorySummary()
+            try verifyActiveSessionRestoration()
             try verifyReviewRangeBoundaries()
             try verifyReviewSnapshotAggregation()
             try verifyReviewViewModelState()
@@ -77,6 +79,75 @@ enum TimeInvestmentSelfCheck {
 
         try expect(emptyProduction.classification == .consumption, "empty production note should downgrade to consumption")
         try expect(emptyProduction.productionNote == nil, "downgraded consumption session should clear production note")
+    }
+
+    private static func verifyHistorySummary() throws {
+        let first = TimeSession(
+            startAt: Date(timeIntervalSince1970: 100),
+            endAt: Date(timeIntervalSince1970: 400),
+            referenceDurationSeconds: 1_500,
+            classification: .consumption,
+            productionNote: nil,
+            endedByUser: true
+        )
+        let second = TimeSession(
+            startAt: Date(timeIntervalSince1970: 500),
+            endAt: Date(timeIntervalSince1970: 900),
+            referenceDurationSeconds: 1_500,
+            classification: .production,
+            productionNote: "checked persistence",
+            endedByUser: true
+        )
+
+        let summary = TimeSessionStore.historySummary(sessions: [first, second])
+
+        try expect(summary.totalCount == 2, "history summary should count all saved sessions")
+        try expect(summary.latestEndAt == second.endAt, "history summary should expose the latest session end time")
+    }
+
+    private static func verifyActiveSessionRestoration() throws {
+        let directory = try LocalJSONStore.applicationSupportDirectory()
+        let activeSessionURL = directory.appendingPathComponent("active-time-session.json")
+        let backupURL = directory.appendingPathComponent("active-time-session.self-check.backup.json")
+        let fileManager = FileManager.default
+
+        if fileManager.fileExists(atPath: backupURL.path) {
+            try fileManager.removeItem(at: backupURL)
+        }
+
+        if fileManager.fileExists(atPath: activeSessionURL.path) {
+            try fileManager.copyItem(at: activeSessionURL, to: backupURL)
+            try fileManager.removeItem(at: activeSessionURL)
+        }
+
+        defer {
+            try? fileManager.removeItem(at: activeSessionURL)
+            if fileManager.fileExists(atPath: backupURL.path) {
+                try? fileManager.moveItem(at: backupURL, to: activeSessionURL)
+            }
+        }
+
+        let startedAt = Date(timeIntervalSince1970: 1_718_200_000)
+        let persistedState = ActiveSessionState(
+            startAt: startedAt,
+            referenceDurationSeconds: 1_500
+        )
+        LocalJSONStore.save(persistedState, to: "active-time-session.json")
+
+        try MainActor.assumeIsolated {
+            let viewModel = TimeInvestmentViewModel(
+                store: InMemoryTimeSessionStore(seedSessions: []),
+                timer: SessionTimer(),
+                referenceDurationSeconds: 1_500
+            )
+
+            try expect(viewModel.isSessionRunning, "view model should restore an active session from disk")
+            try expect(viewModel.elapsedSeconds(now: startedAt.addingTimeInterval(300)) == 300, "restored session should continue elapsed time from persisted start")
+
+            viewModel.completeSession(using: .consumption, now: startedAt.addingTimeInterval(600))
+        }
+
+        try expect(fileManager.fileExists(atPath: activeSessionURL.path) == false, "completing a restored session should clear persisted active session state")
     }
 
     private static func verifyReviewRangeBoundaries() throws {

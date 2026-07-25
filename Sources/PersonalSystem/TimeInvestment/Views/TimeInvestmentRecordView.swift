@@ -7,6 +7,7 @@ struct TimeInvestmentRecordView: View {
         VStack(alignment: .leading, spacing: 20) {
             header
             totalsCard
+            historyCard
             sessionCard
 
             Spacer(minLength: 0)
@@ -17,7 +18,7 @@ struct TimeInvestmentRecordView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("时间投入")
                 .font(.largeTitle.weight(.semibold))
-            Text("开始时零阻力，结束时必须裁决。")
+            Text("开始时零阻力，结束后补任务、分类和主观分数。")
                 .foregroundStyle(.secondary)
         }
     }
@@ -25,11 +26,11 @@ struct TimeInvestmentRecordView: View {
     private var totalsCard: some View {
         HStack(spacing: 12) {
             RecordMetricPill(
-                title: "今日生产",
+                title: "学习/工作",
                 value: DurationFormatter.formatted(viewModel.todayTotals.productionSeconds)
             )
             RecordMetricPill(
-                title: "今日消费",
+                title: "其他记录",
                 value: DurationFormatter.formatted(viewModel.todayTotals.consumptionSeconds)
             )
             Spacer(minLength: 0)
@@ -63,6 +64,29 @@ struct TimeInvestmentRecordView: View {
                     viewModel.startSession()
                 }
                 .buttonStyle(.borderedProminent)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.secondary.opacity(0.08))
+        )
+    }
+
+    private var historyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("持久化状态")
+                .font(.headline)
+
+            Text("历史记录数：\(viewModel.historySummary.totalCount)")
+
+            if let latestEndAt = viewModel.historySummary.latestEndAt {
+                Text("最近记录时间：\(latestEndAt.formatted(date: .abbreviated, time: .shortened))")
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("最近记录时间：暂无")
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

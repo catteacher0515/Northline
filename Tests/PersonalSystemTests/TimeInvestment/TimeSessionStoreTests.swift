@@ -3,30 +3,36 @@ import XCTest
 @testable import PersonalSystem
 
 final class TimeSessionStoreTests: XCTestCase {
-    func testDailyTotalsSeparateProductionAndConsumption() {
+    func testDailyTotalsSeparateRecordedCategories() {
         let calendar = Calendar(identifier: .gregorian)
         let startOfDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
 
-        let production = TimeSession(
+        let study = TimeSession(
             startAt: startOfDay,
             endAt: startOfDay.addingTimeInterval(1_800),
             referenceDurationSeconds: 1_500,
-            classification: .production,
-            productionNote: "Wrote implementation notes",
+            taskName: "实习工作",
+            category: .studyWork,
+            joyScore: 7,
+            meaningScore: 9,
+            note: "进入状态之后很顺",
             endedByUser: true
         )
 
-        let consumption = TimeSession(
+        let entertainment = TimeSession(
             startAt: startOfDay.addingTimeInterval(2_000),
             endAt: startOfDay.addingTimeInterval(3_200),
             referenceDurationSeconds: 1_500,
-            classification: .consumption,
-            productionNote: nil,
+            taskName: "刷视频",
+            category: .entertainment,
+            joyScore: 4,
+            meaningScore: 2,
+            note: nil,
             endedByUser: true
         )
 
         let totals = TimeSessionStore.dailyTotals(
-            sessions: [production, consumption],
+            sessions: [study, entertainment],
             now: startOfDay.addingTimeInterval(4_000),
             calendar: calendar
         )
@@ -35,35 +41,65 @@ final class TimeSessionStoreTests: XCTestCase {
         XCTAssertEqual(totals.consumptionSeconds, 1_200)
     }
 
-    func testEmptyProductionNoteDowngradesToConsumption() {
-        let session = TimeSession(
-            startAt: Date(timeIntervalSince1970: 100),
-            endAt: Date(timeIntervalSince1970: 400),
-            referenceDurationSeconds: 1_500,
-            classification: .production,
-            productionNote: "   ",
-            endedByUser: true
+    func testSessionDraftClassifiesTaskAndStoresSubjectiveScores() {
+        let draft = SessionDraftResult(
+            taskName: "晚上刷视频",
+            category: nil,
+            joyScore: 5,
+            meaningScore: 2,
+            note: "  超过半小时之后就没意思了  "
         )
 
-        let normalized = session.normalizedForPersistence()
+        let session = draft.makeSession(
+            startAt: Date(timeIntervalSince1970: 100),
+            endAt: Date(timeIntervalSince1970: 2_000),
+            referenceDurationSeconds: 1_500
+        )
 
-        XCTAssertEqual(normalized.classification, .consumption)
-        XCTAssertNil(normalized.productionNote)
+        XCTAssertEqual(session.taskName, "晚上刷视频")
+        XCTAssertEqual(session.category, .entertainment)
+        XCTAssertEqual(session.joyScore, 5)
+        XCTAssertEqual(session.meaningScore, 2)
+        XCTAssertEqual(session.note, "超过半小时之后就没意思了")
     }
 
-    func testProductionNoteIsTrimmedWhenPersisted() {
+    func testSessionDurationRoundsToNearestQuarterHour() {
         let session = TimeSession(
             startAt: Date(timeIntervalSince1970: 100),
-            endAt: Date(timeIntervalSince1970: 400),
+            endAt: Date(timeIntervalSince1970: 100 + 8 * 60),
             referenceDurationSeconds: 1_500,
-            classification: .production,
-            productionNote: "  shipped dashboard copy  ",
+            taskName: "学习",
+            category: .studyWork,
+            joyScore: nil,
+            meaningScore: nil,
+            note: nil,
             endedByUser: true
         )
 
         let normalized = session.normalizedForPersistence()
 
-        XCTAssertEqual(normalized.classification, .production)
-        XCTAssertEqual(normalized.productionNote, "shipped dashboard copy")
+        XCTAssertEqual(normalized.roundedDurationSeconds, 15 * 60)
+    }
+
+    func testBlankTaskFallsBackToOther() {
+        let session = TimeSession(
+            startAt: Date(timeIntervalSince1970: 100),
+            endAt: Date(timeIntervalSince1970: 400),
+            referenceDurationSeconds: 1_500,
+            taskName: "   ",
+            category: .studyWork,
+            joyScore: 99,
+            meaningScore: 0,
+            note: "   ",
+            endedByUser: true
+        )
+
+        let normalized = session.normalizedForPersistence()
+
+        XCTAssertEqual(normalized.taskName, "未命名")
+        XCTAssertEqual(normalized.category, .other)
+        XCTAssertEqual(normalized.joyScore, 10)
+        XCTAssertEqual(normalized.meaningScore, 1)
+        XCTAssertNil(normalized.note)
     }
 }

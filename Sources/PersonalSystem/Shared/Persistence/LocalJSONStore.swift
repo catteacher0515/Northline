@@ -39,4 +39,17 @@ enum LocalJSONStore {
             NSLog("LocalJSONStore save failed for %@: %@", fileName, String(describing: error))
         }
     }
+
+    static func delete(_ fileName: String) {
+        do {
+            let directory = try applicationSupportDirectory()
+            let url = directory.appendingPathComponent(fileName)
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                return
+            }
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            NSLog("LocalJSONStore delete failed for %@: %@", fileName, String(describing: error))
+        }
+    }
 }
