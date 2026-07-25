@@ -244,8 +244,8 @@ struct TimeInvestmentMenuBarView: View {
 
                 Spacer()
 
-                Button(exportStatusText.isEmpty ? "复制导出" : exportStatusText) {
-                    copyReviewExport()
+                Button(exportStatusText.isEmpty ? "导出" : exportStatusText) {
+                    exportReviewFiles()
                 }
                 .buttonStyle(.borderedProminent)
 
@@ -405,16 +405,44 @@ struct TimeInvestmentMenuBarView: View {
         return viewModel.sessions(from: interval.start, to: interval.end)
     }
 
-    private func copyReviewExport() {
+    private func exportReviewFiles() {
         let interval = reviewDateBounds()
-        let exportText = TimeSessionExportFormatter.markdown(
+        let package = TimeSessionExportFormatter.package(
             sessions: viewModel.sessions(from: interval.start, to: interval.end),
             startDate: interval.start,
             endDate: interval.end
         )
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(exportText, forType: .string)
-        exportStatusText = "已复制"
+
+        let panel = NSOpenPanel()
+        panel.title = "选择导出位置"
+        panel.prompt = "导出"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+
+        guard panel.runModal() == .OK, let parentURL = panel.url else {
+            return
+        }
+
+        let exportURL = parentURL.appendingPathComponent(package.folderName, isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: exportURL, withIntermediateDirectories: true)
+
+            for (fileName, content) in package.files {
+                try content.write(
+                    to: exportURL.appendingPathComponent(fileName),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
+
+            exportStatusText = "已导出"
+        } catch {
+            exportStatusText = "导出失败"
+            NSLog("Time Mate export failed: %@", String(describing: error))
+        }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             exportStatusText = ""

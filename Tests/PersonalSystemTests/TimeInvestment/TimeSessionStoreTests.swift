@@ -242,4 +242,50 @@ final class TimeSessionStoreTests: XCTestCase {
         XCTAssertTrue(export.contains("\"rounded_minutes\":60"))
         XCTAssertTrue(export.contains("\"note\":\"推进核心任务\""))
     }
+
+    func testExportPackageContainsAnalysisFiles() {
+        let calendar = Calendar(identifier: .gregorian)
+        let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let study = TimeSession(
+            startAt: startDay.addingTimeInterval(9 * 3_600),
+            endAt: startDay.addingTimeInterval(10 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "学习",
+            category: .studyWork,
+            joyScore: 7,
+            meaningScore: 9,
+            note: "推进核心任务",
+            endedByUser: true
+        )
+        let entertainment = TimeSession(
+            startAt: startDay.addingTimeInterval(21 * 3_600),
+            endAt: startDay.addingTimeInterval(22 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "刷视频",
+            category: .entertainment,
+            joyScore: 5,
+            meaningScore: 2,
+            note: nil,
+            endedByUser: true
+        )
+
+        let package = TimeSessionExportFormatter.package(
+            sessions: [entertainment, study],
+            startDate: startDay,
+            endDate: startDay,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(Set(package.files.keys), [
+            "README.md",
+            "sessions.jsonl",
+            "sessions.csv",
+            "daily_summary.json"
+        ])
+        XCTAssertTrue(package.folderName.hasPrefix("TimeMate-Export-"))
+        XCTAssertTrue(package.files["sessions.jsonl"]?.contains("\"task_name\":\"学习\"") == true)
+        XCTAssertTrue(package.files["sessions.csv"]?.contains("date,start_time,end_time,task_name,category") == true)
+        XCTAssertTrue(package.files["daily_summary.json"]?.contains("\"total_recorded_minutes\" : 120") == true)
+        XCTAssertTrue(package.files["README.md"]?.contains("给大模型分析的建议") == true)
+    }
 }
