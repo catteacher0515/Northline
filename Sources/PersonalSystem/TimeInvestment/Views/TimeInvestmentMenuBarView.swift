@@ -847,6 +847,8 @@ private struct SunSticker: View {
 private struct ScrapbookDateStepper: View {
     let title: String
     @Binding var date: Date
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 7) {
@@ -863,9 +865,28 @@ private struct ScrapbookDateStepper: View {
             .buttonStyle(.plain)
             .foregroundStyle(ScrapbookPalette.ink)
 
-            Text(date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits)))
+            TextField("", text: $text)
                 .font(.caption.monospacedDigit().weight(.bold))
                 .foregroundStyle(ScrapbookPalette.ink)
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+                .frame(width: 76)
+                .onSubmit {
+                    commitText()
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused == false {
+                        commitText()
+                    }
+                }
+                .onChange(of: date) { _, newDate in
+                    if isFocused == false {
+                        text = Self.string(from: newDate)
+                    }
+                }
+                .onAppear {
+                    text = Self.string(from: date)
+                }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background {
@@ -890,12 +911,47 @@ private struct ScrapbookDateStepper: View {
 
     private func shiftDay(_ value: Int) {
         date = Calendar.current.date(byAdding: .day, value: value, to: date) ?? date
+        text = Self.string(from: date)
+    }
+
+    private func commitText() {
+        guard let parsedDate = Self.date(from: text, keepingTimeFrom: date) else {
+            text = Self.string(from: date)
+            return
+        }
+
+        date = parsedDate
+        text = Self.string(from: parsedDate)
+    }
+
+    private static func string(from date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d/%02d/%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+    }
+
+    private static func date(from rawText: String, keepingTimeFrom originalDate: Date) -> Date? {
+        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmed.replacingOccurrences(of: "-", with: "/").replacingOccurrences(of: ".", with: "/")
+        let parts = normalized.split(separator: "/").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+
+        let timeComponents = Calendar.current.dateComponents([.hour, .minute, .second], from: originalDate)
+        var components = DateComponents()
+        components.year = parts[0]
+        components.month = parts[1]
+        components.day = parts[2]
+        components.hour = timeComponents.hour
+        components.minute = timeComponents.minute
+        components.second = timeComponents.second ?? 0
+        return Calendar.current.date(from: components)
     }
 }
 
 private struct ScrapbookTimeStepper: View {
     let title: String
     @Binding var date: Date
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         HStack(spacing: 7) {
@@ -912,10 +968,28 @@ private struct ScrapbookTimeStepper: View {
             .buttonStyle(.plain)
             .foregroundStyle(ScrapbookPalette.ink)
 
-            Text(date.formatted(date: .omitted, time: .shortened))
+            TextField("", text: $text)
                 .font(.caption.monospacedDigit().weight(.bold))
                 .foregroundStyle(ScrapbookPalette.ink)
-                .frame(minWidth: 48)
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+                .frame(width: 46)
+                .onSubmit {
+                    commitText()
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if focused == false {
+                        commitText()
+                    }
+                }
+                .onChange(of: date) { _, newDate in
+                    if isFocused == false {
+                        text = Self.string(from: newDate)
+                    }
+                }
+                .onAppear {
+                    text = Self.string(from: date)
+                }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background {
@@ -940,6 +1014,48 @@ private struct ScrapbookTimeStepper: View {
 
     private func shiftMinutes(_ value: Int) {
         date = Calendar.current.date(byAdding: .minute, value: value, to: date) ?? date
+        text = Self.string(from: date)
+    }
+
+    private func commitText() {
+        guard let parsedDate = Self.date(from: text, keepingDateFrom: date) else {
+            text = Self.string(from: date)
+            return
+        }
+
+        date = parsedDate
+        text = Self.string(from: parsedDate)
+    }
+
+    private static func string(from date: Date) -> String {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+    }
+
+    private static func date(from rawText: String, keepingDateFrom originalDate: Date) -> Date? {
+        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hour: Int
+        let minute: Int
+
+        if trimmed.contains(":") {
+            let parts = trimmed.split(separator: ":").compactMap { Int($0) }
+            guard parts.count == 2 else { return nil }
+            hour = parts[0]
+            minute = parts[1]
+        } else {
+            let digits = trimmed.filter(\.isNumber)
+            guard digits.count == 3 || digits.count == 4, let value = Int(digits) else { return nil }
+            hour = value / 100
+            minute = value % 100
+        }
+
+        guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
+
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: originalDate)
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+        return Calendar.current.date(from: components)
     }
 }
 
