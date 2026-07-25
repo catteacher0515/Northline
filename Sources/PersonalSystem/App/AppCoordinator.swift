@@ -51,61 +51,62 @@ private struct TimeRicherDesktopWidgetView: View {
         }
         .padding(10)
         .frame(width: viewMode == .record ? 390 : 740, height: viewMode == .record ? 650 : 720)
-        .background(TimeSliceBackdrop())
+        .background(ScrapbookBackdrop())
     }
 }
 
-struct TimeSliceBackdrop: View {
+struct ScrapbookBackdrop: View {
     var body: some View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.075, green: 0.078, blue: 0.078),
-                    Color(red: 0.115, green: 0.112, blue: 0.104)
+                    Color(red: 0.965, green: 0.942, blue: 0.890),
+                    Color(red: 0.925, green: 0.895, blue: 0.825)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
-            TimelineGrid()
-                .opacity(0.18)
+            PaperTexture()
+                .opacity(0.34)
 
-            Circle()
-                .fill(Color(red: 0.22, green: 0.42, blue: 0.72).opacity(0.16))
-                .blur(radius: 72)
-                .frame(width: 260, height: 260)
-                .offset(x: -150, y: -250)
+            TornTapeBand(color: Color(red: 0.79, green: 0.68, blue: 0.94).opacity(0.52), rotation: -5)
+                .frame(width: 250, height: 54)
+                .offset(x: -125, y: -238)
 
-            Circle()
-                .fill(Color(red: 0.36, green: 0.56, blue: 0.38).opacity(0.11))
-                .blur(radius: 88)
-                .frame(width: 300, height: 300)
-                .offset(x: 180, y: 240)
+            TornTapeBand(color: Color(red: 0.96, green: 0.78, blue: 0.25).opacity(0.38), rotation: 4)
+                .frame(width: 300, height: 62)
+                .offset(x: 145, y: 262)
         }
     }
 }
 
-private struct TimelineGrid: View {
+private struct PaperTexture: View {
     var body: some View {
         Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 18
-
-            var x: CGFloat = 0
-            while x <= size.width {
-                path.move(to: CGPoint(x: x, y: 0))
-                path.addLine(to: CGPoint(x: x, y: size.height))
-                x += spacing
+            for index in 0..<420 {
+                let x = CGFloat((index * 37) % 997) / 997 * size.width
+                let y = CGFloat((index * 71) % 991) / 991 * size.height
+                let radius = CGFloat((index % 4) + 1) * 0.34
+                let rect = CGRect(x: x, y: y, width: radius, height: radius)
+                context.fill(Path(ellipseIn: rect), with: .color(.black.opacity(0.06)))
             }
-
-            var y: CGFloat = 0
-            while y <= size.height {
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: size.width, y: y))
-                y += spacing
-            }
-
-            context.stroke(path, with: .color(.white.opacity(0.11)), lineWidth: 0.5)
         }
     }
 }
+
+private struct TornTapeBand: View {
+    let color: Color
+    let rotation: Double
+
+    var body: some View {
+        UnevenRoundedRectangle(cornerRadii: .init(topLeading: 8, bottomLeading: 3, bottomTrailing: 9, topTrailing: 4), style: .continuous)
+            .fill(color)
+            .rotationEffect(.degrees(rotation))
+            .overlay {
+                PaperTexture()
+                    .clipShape(UnevenRoundedRectangle(cornerRadii: .init(topLeading: 8, bottomLeading: 3, bottomTrailing: 9, topTrailing: 4), style: .continuous))
+                    .opacity(0.18)
+            }
+        }
+    }

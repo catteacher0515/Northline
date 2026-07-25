@@ -65,7 +65,7 @@ struct TimeInvestmentMenuBarView: View {
 
             Text("快捷键可在 Time Mate 设置中调整。")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.mutedInk)
         }
     }
 
@@ -79,25 +79,35 @@ struct TimeInvestmentMenuBarView: View {
     private func header(showReviewButton: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Time Mate")
-                    .font(.system(.headline, design: .rounded).weight(.bold))
+                HStack(spacing: 8) {
+                    Text("Time Mate")
+                        .font(.system(.title3, design: .rounded).weight(.black))
+                        .foregroundStyle(ScrapbookPalette.ink)
+
+                    if showReviewButton {
+                        SunSticker()
+                            .frame(width: 28, height: 28)
+                    }
+                }
                 Spacer()
                 if showReviewButton {
                     Button("回顾") {
                         viewMode = .review
                     }
                     .buttonStyle(.bordered)
+                    .tint(ScrapbookPalette.purpleTape)
                 } else {
                     Text(Date().formatted(date: .abbreviated, time: .omitted))
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ScrapbookPalette.mutedInk)
                 }
             }
 
-            Text(viewModel.isSessionRunning ? "正在记录这段时间" : "点击开始，结束后再补任务")
+            Text(viewModel.isSessionRunning ? "正在记录这段时间" : "今天先记下来，结束后再补任务")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.mutedInk)
         }
+        .padding(.bottom, 2)
     }
 
     private var runningSessionSection: some View {
@@ -119,14 +129,14 @@ struct TimeInvestmentMenuBarView: View {
             .tint(.red.opacity(0.82))
         }
         .padding(14)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: -0.7))
     }
 
     private var idleSessionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("不需要先想分类，先把计时打开。")
+            Text("不用先想分类，先把计时打开。")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.mutedInk)
 
             Button {
                 viewModel.startSession()
@@ -135,10 +145,10 @@ struct TimeInvestmentMenuBarView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.green.opacity(0.76))
+            .tint(ScrapbookPalette.greenTape)
         }
         .padding(14)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.yellowNote, rotation: -0.5))
     }
 
     private var endSessionForm: some View {
@@ -177,7 +187,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(14)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: 0.4))
     }
 
     private func scoreSlider(title: String, value: Binding<Double>) -> some View {
@@ -185,10 +195,11 @@ struct TimeInvestmentMenuBarView: View {
             HStack {
                 Text(title)
                     .font(.caption.weight(.semibold))
+                    .foregroundStyle(ScrapbookPalette.ink)
                 Spacer()
                 Text("\(Int(value.wrappedValue))")
                     .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             }
 
             Slider(value: value, in: 1...10, step: 1)
@@ -199,25 +210,25 @@ struct TimeInvestmentMenuBarView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("今日色块")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.ink)
 
             HStack(spacing: 1) {
                 let slots = todaySlots()
                 ForEach(slots.indices, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(slots[index].map(color(for:)) ?? Color.secondary.opacity(0.12))
+                        .fill(slots[index].map(color(for:)) ?? ScrapbookPalette.blankSlot)
                         .frame(height: 22)
                         .overlay(alignment: .top) {
-                            Color.white.opacity(slots[index] == nil ? 0.02 : 0.12)
+                            Color.white.opacity(slots[index] == nil ? 0.18 : 0.28)
                                 .frame(height: 1)
                         }
                 }
             }
             .padding(7)
-            .background(TimeRailBackground())
+            .background(TapeRailBackground())
         }
         .padding(12)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: 0.6))
     }
 
     private var recentConfirmation: some View {
@@ -225,14 +236,14 @@ struct TimeInvestmentMenuBarView: View {
             HStack {
                 Text("最近保存")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.ink)
             }
 
             let records = viewModel.recentSessions(limit: 3)
             if records.isEmpty {
                 Text("还没有记录。")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             } else {
                 LazyVStack(alignment: .leading, spacing: 8) {
                     ForEach(records, id: \.id) { session in
@@ -242,7 +253,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.yellowNote, rotation: -0.8))
     }
 
     private var reviewPage: some View {
@@ -250,10 +261,11 @@ struct TimeInvestmentMenuBarView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("记录回顾")
-                        .font(.system(.title2, design: .rounded).weight(.bold))
+                        .font(.system(.title2, design: .rounded).weight(.black))
+                        .foregroundStyle(ScrapbookPalette.ink)
                     Text("按天或按时间范围看过去的色块。")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ScrapbookPalette.mutedInk)
                 }
 
                 Spacer()
@@ -262,11 +274,13 @@ struct TimeInvestmentMenuBarView: View {
                     exportReviewFiles()
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(ScrapbookPalette.blueTape)
 
                 Button("返回记录") {
                     viewMode = .record
                 }
                 .buttonStyle(.bordered)
+                .tint(ScrapbookPalette.purpleTape)
             }
 
             reviewControls
@@ -305,7 +319,7 @@ struct TimeInvestmentMenuBarView: View {
             case .last7Days:
                 Text("展示包含今天在内的最近 7 天。")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             case .custom:
                 HStack {
                     DatePicker("开始", selection: $customStartDate, displayedComponents: .date)
@@ -315,7 +329,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.purpleTape.opacity(0.74), rotation: -0.5))
     }
 
     private var reviewColorBlocks: some View {
@@ -324,17 +338,17 @@ struct TimeInvestmentMenuBarView: View {
             HStack {
                 Text("色块")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.ink)
                 Spacer()
                 Text("每格 15 min")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             }
 
             if rows.isEmpty {
                 Text("这个范围还没有记录。")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -351,7 +365,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: 0.5))
     }
 
     private var reviewRecordList: some View {
@@ -359,12 +373,12 @@ struct TimeInvestmentMenuBarView: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("记录明细")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.ink)
 
             if records.isEmpty {
                 Text("没有可展示的记录。")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -377,7 +391,7 @@ struct TimeInvestmentMenuBarView: View {
             }
         }
         .padding(12)
-        .background(TimeGlassPanel(cornerRadius: 18))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.yellowNote, rotation: -0.4))
     }
 
     private func saveEndedSession() {
@@ -512,60 +526,62 @@ struct TimeInvestmentMenuBarView: View {
     private func color(for category: TimeSessionCategory) -> Color {
         switch category {
         case .sleep:
-            return Color(red: 0.73, green: 0.75, blue: 0.78)
+            return Color(red: 0.73, green: 0.74, blue: 0.73)
         case .foodExercise:
-            return Color(red: 0.34, green: 0.62, blue: 0.43)
+            return Color(red: 0.48, green: 0.76, blue: 0.53)
         case .studyWork:
-            return Color(red: 0.31, green: 0.48, blue: 0.84)
+            return Color(red: 0.42, green: 0.62, blue: 0.94)
         case .entertainment:
-            return Color(red: 0.82, green: 0.34, blue: 0.32)
+            return Color(red: 0.93, green: 0.42, blue: 0.42)
         case .other:
-            return Color(red: 0.72, green: 0.66, blue: 0.56)
+            return Color(red: 0.76, green: 0.66, blue: 0.53)
         }
     }
 }
 
-private struct TimeGlassPanel: View {
-    var cornerRadius: CGFloat = 18
+private enum ScrapbookPalette {
+    static let ink = Color(red: 0.095, green: 0.083, blue: 0.066)
+    static let mutedInk = Color(red: 0.36, green: 0.32, blue: 0.27)
+    static let whitePaper = Color(red: 0.985, green: 0.968, blue: 0.925)
+    static let yellowNote = Color(red: 0.965, green: 0.835, blue: 0.285)
+    static let purpleTape = Color(red: 0.775, green: 0.675, blue: 0.940)
+    static let greenTape = Color(red: 0.455, green: 0.765, blue: 0.510)
+    static let blueTape = Color(red: 0.420, green: 0.620, blue: 0.930)
+    static let blankSlot = Color(red: 0.825, green: 0.810, blue: 0.765)
+}
+
+private struct ScrapbookPanel: View {
+    var tint: Color
+    var rotation: Double = 0
+    var cornerRadius: CGFloat = 14
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.105),
-                        Color.white.opacity(0.055)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(tint)
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.18),
-                                Color.white.opacity(0.055)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    .strokeBorder(ScrapbookPalette.ink.opacity(0.82), lineWidth: 1.8)
+                    .offset(x: 1.2, y: 1.2)
             }
-            .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 12)
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                    .padding(2)
+            }
+            .rotationEffect(.degrees(rotation))
+            .shadow(color: Color.black.opacity(0.16), radius: 5, x: 3, y: 4)
     }
 }
 
-private struct TimeRailBackground: View {
+private struct TapeRailBackground: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(Color.black.opacity(0.22))
+            .fill(Color.white.opacity(0.48))
             .overlay {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+                    .strokeBorder(ScrapbookPalette.ink.opacity(0.45), lineWidth: 1.3)
             }
+            .shadow(color: Color.black.opacity(0.08), radius: 2, x: 1, y: 2)
     }
 }
 
@@ -577,14 +593,48 @@ private struct MetricPill: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ScrapbookPalette.mutedInk)
             Text(value)
                 .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundStyle(ScrapbookPalette.ink)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(TimeGlassPanel(cornerRadius: 14))
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: 0.5, cornerRadius: 12))
+    }
+}
+
+private struct SunSticker: View {
+    var body: some View {
+        ZStack {
+            ForEach(0..<10, id: \.self) { index in
+                Capsule()
+                    .fill(Color(red: 0.95, green: 0.78, blue: 0.16))
+                    .frame(width: 4, height: 9)
+                    .offset(y: -13)
+                    .rotationEffect(.degrees(Double(index) * 36))
+            }
+
+            Circle()
+                .fill(Color(red: 0.98, green: 0.83, blue: 0.17))
+                .overlay {
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.8), lineWidth: 2)
+                }
+
+            HStack(spacing: 5) {
+                Circle().fill(ScrapbookPalette.ink).frame(width: 2.5, height: 2.5)
+                Circle().fill(ScrapbookPalette.ink).frame(width: 2.5, height: 2.5)
+            }
+            .offset(y: -2)
+
+            Path { path in
+                path.move(to: CGPoint(x: 10, y: 16))
+                path.addQuadCurve(to: CGPoint(x: 18, y: 16), control: CGPoint(x: 14, y: 20))
+            }
+            .stroke(ScrapbookPalette.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+        }
     }
 }
 
@@ -626,16 +676,16 @@ private struct DayBlockRow: View {
             HStack(spacing: 1) {
                 ForEach(slots.indices, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                        .fill(slots[index].map(colorForCategory) ?? Color.secondary.opacity(0.12))
+                        .fill(slots[index].map(colorForCategory) ?? ScrapbookPalette.blankSlot)
                         .frame(height: 20)
                         .overlay(alignment: .top) {
-                            Color.white.opacity(slots[index] == nil ? 0.02 : 0.10)
+                            Color.white.opacity(slots[index] == nil ? 0.18 : 0.28)
                                 .frame(height: 1)
                         }
                 }
             }
             .padding(6)
-            .background(TimeRailBackground())
+            .background(TapeRailBackground())
         }
     }
 }
@@ -650,30 +700,34 @@ private struct RecordRow: View {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
+                .overlay {
+                    Circle().strokeBorder(ScrapbookPalette.ink.opacity(0.28), lineWidth: 0.7)
+                }
                 .padding(.top, 5)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(session.taskName ?? "未命名")
                         .font(.caption.weight(.semibold))
+                        .foregroundStyle(ScrapbookPalette.ink)
                         .lineLimit(1)
 
                     Spacer()
 
                     Text(showsDate ? "\(dateText) \(timeRange)" : timeRange)
                         .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ScrapbookPalette.mutedInk)
                 }
 
                 Text("\(session.category.title) · \(DurationFormatter.formatted(session.roundedSeconds)) · 快 \(session.joyScore ?? 6) · 义 \(session.meaningScore ?? 6)")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ScrapbookPalette.mutedInk)
                     .lineLimit(1)
 
                 if let note = session.note, note.isEmpty == false {
                     Text(note)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(ScrapbookPalette.mutedInk)
                         .lineLimit(1)
                 }
             }
