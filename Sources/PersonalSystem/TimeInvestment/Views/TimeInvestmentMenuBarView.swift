@@ -109,6 +109,7 @@ struct TimeInvestmentMenuBarView: View {
                 Spacer()
                 if showReviewButton {
                     Button("回顾") {
+                        TimeMateInteractionSound.navigate.play()
                         viewMode = .review
                     }
                     .buttonStyle(.bordered)
@@ -137,6 +138,7 @@ struct TimeInvestmentMenuBarView: View {
             }
 
             Button {
+                TimeMateInteractionSound.stop.play()
                 endedAt = Date()
                 isEndingSession = true
             } label: {
@@ -157,6 +159,7 @@ struct TimeInvestmentMenuBarView: View {
                 .foregroundStyle(ScrapbookPalette.mutedInk)
 
             Button {
+                TimeMateInteractionSound.start.play()
                 viewModel.startSession()
             } label: {
                 Text("开始")
@@ -166,6 +169,7 @@ struct TimeInvestmentMenuBarView: View {
             .tint(ScrapbookPalette.greenTape)
 
             Button {
+                TimeMateInteractionSound.navigate.play()
                 prepareManualSession()
                 isAddingManualSession = true
             } label: {
@@ -210,6 +214,7 @@ struct TimeInvestmentMenuBarView: View {
 
             HStack {
                 Button {
+                    TimeMateInteractionSound.cancel.play()
                     resetManualDraft()
                 } label: {
                     Text("取消")
@@ -220,6 +225,7 @@ struct TimeInvestmentMenuBarView: View {
                 Spacer()
 
                 Button {
+                    TimeMateInteractionSound.save.play()
                     saveManualSession()
                 } label: {
                     Text("保存补录")
@@ -256,6 +262,7 @@ struct TimeInvestmentMenuBarView: View {
 
             HStack {
                 Button {
+                    TimeMateInteractionSound.cancel.play()
                     resetDraft()
                 } label: {
                     Text("放弃")
@@ -266,6 +273,7 @@ struct TimeInvestmentMenuBarView: View {
                 Spacer()
 
                 Button {
+                    TimeMateInteractionSound.save.play()
                     saveEndedSession()
                 } label: {
                     Text("保存")
@@ -304,6 +312,7 @@ struct TimeInvestmentMenuBarView: View {
             Menu {
                 ForEach(TimeSessionCategory.allCases) { category in
                     Button(category.title) {
+                        TimeMateInteractionSound.select.play()
                         selection.wrappedValue = category
                     }
                 }
@@ -402,6 +411,7 @@ struct TimeInvestmentMenuBarView: View {
                 .tint(ScrapbookPalette.blueTape)
 
                 Button("返回记录") {
+                    TimeMateInteractionSound.navigate.play()
                     viewMode = .record
                 }
                 .buttonStyle(.bordered)
@@ -645,6 +655,7 @@ struct TimeInvestmentMenuBarView: View {
         panel.allowsMultipleSelection = false
 
         guard panel.runModal() == .OK, let parentURL = panel.url else {
+            TimeMateInteractionSound.cancel.play()
             return
         }
 
@@ -662,8 +673,10 @@ struct TimeInvestmentMenuBarView: View {
             }
 
             exportStatusText = "已导出"
+            TimeMateInteractionSound.success.play()
         } catch {
             exportStatusText = "导出失败"
+            TimeMateInteractionSound.error.play()
             NSLog("Time Mate export failed: %@", String(describing: error))
         }
 
@@ -721,6 +734,55 @@ private enum ScrapbookPalette {
     static let greenTape = Color(red: 0.455, green: 0.765, blue: 0.510)
     static let blueTape = Color(red: 0.420, green: 0.620, blue: 0.930)
     static let blankSlot = Color(red: 0.825, green: 0.810, blue: 0.765)
+}
+
+private enum TimeMateInteractionSound {
+    case start
+    case stop
+    case save
+    case success
+    case error
+    case cancel
+    case navigate
+    case select
+
+    func play() {
+        guard let sound = NSSound(named: soundName) else {
+            NSSound.beep()
+            return
+        }
+
+        sound.volume = volume
+        sound.play()
+    }
+
+    private var soundName: NSSound.Name {
+        switch self {
+        case .start:
+            return NSSound.Name("Pop")
+        case .stop:
+            return NSSound.Name("Ping")
+        case .save, .success:
+            return NSSound.Name("Glass")
+        case .error:
+            return NSSound.Name("Basso")
+        case .cancel:
+            return NSSound.Name("Tink")
+        case .navigate, .select:
+            return NSSound.Name("Pop")
+        }
+    }
+
+    private var volume: Float {
+        switch self {
+        case .error:
+            return 0.55
+        case .start, .stop, .save, .success:
+            return 0.42
+        case .cancel, .navigate, .select:
+            return 0.28
+        }
+    }
 }
 
 private struct ScrapbookPanel: View {
