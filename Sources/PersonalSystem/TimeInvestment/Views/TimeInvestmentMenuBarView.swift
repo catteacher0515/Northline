@@ -17,6 +17,14 @@ struct TimeInvestmentMenuBarView: View {
     @State private var joyScore = 6.0
     @State private var meaningScore = 6.0
     @State private var note = ""
+    @State private var isAddingManualSession = false
+    @State private var manualStartAt = Date().addingTimeInterval(-3_600)
+    @State private var manualEndAt = Date()
+    @State private var manualTaskName = ""
+    @State private var manualCategory: TimeSessionCategory = .other
+    @State private var manualJoyScore = 6.0
+    @State private var manualMeaningScore = 6.0
+    @State private var manualNote = ""
     @State private var reviewScope: ReviewScope = .day
     @State private var selectedDay = Date()
     @State private var customStartDate = Calendar.current.date(byAdding: .day, value: -6, to: Date()) ?? Date()
@@ -43,6 +51,9 @@ struct TimeInvestmentMenuBarView: View {
         .onChange(of: taskName) { _, newValue in
             selectedCategory = TimeSessionCategory.classify(taskName: newValue)
         }
+        .onChange(of: manualTaskName) { _, newValue in
+            manualCategory = TimeSessionCategory.classify(taskName: newValue)
+        }
     }
 
     private var recordPage: some View {
@@ -57,11 +68,17 @@ struct TimeInvestmentMenuBarView: View {
                     runningSessionSection
                 }
             } else {
-                idleSessionSection
+                if isAddingManualSession {
+                    manualSessionForm
+                } else {
+                    idleSessionSection
+                }
             }
 
-            todayTimeline
-            recentConfirmation
+            if isAddingManualSession == false {
+                todayTimeline
+                recentConfirmation
+            }
 
             Text("快捷键可在 Time Mate 设置中调整。")
                 .font(.caption2)
@@ -146,9 +163,68 @@ struct TimeInvestmentMenuBarView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(ScrapbookPalette.greenTape)
+
+            Button {
+                prepareManualSession()
+                isAddingManualSession = true
+            } label: {
+                Text("手动补录")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(ScrapbookPalette.purpleTape)
         }
         .padding(14)
         .background(ScrapbookPanel(tint: ScrapbookPalette.yellowNote, rotation: -0.5))
+    }
+
+    private var manualSessionForm: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Text("补一条漏掉的时间")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(ScrapbookPalette.ink)
+
+            ScrapbookDateStepper(title: "日期", date: $manualStartAt)
+
+            HStack {
+                ScrapbookTimeStepper(title: "开始", date: $manualStartAt)
+                Spacer()
+                ScrapbookTimeStepper(title: "结束", date: $manualEndAt)
+            }
+
+            TextField("任务名，例如：通勤、开会、睡觉", text: $manualTaskName)
+                .textFieldStyle(.roundedBorder)
+
+            Picker("分类", selection: $manualCategory) {
+                ForEach(TimeSessionCategory.allCases) { category in
+                    Text(category.title).tag(category)
+                }
+            }
+            .pickerStyle(.menu)
+
+            scoreSlider(title: "快乐值", value: $manualJoyScore)
+            scoreSlider(title: "意义值", value: $manualMeaningScore)
+
+            TextField("备注，可选", text: $manualNote)
+                .textFieldStyle(.roundedBorder)
+
+            HStack {
+                Button("取消") {
+                    resetManualDraft()
+                }
+
+                Spacer()
+
+                Button("保存补录") {
+                    saveManualSession()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ScrapbookPalette.greenTape)
+                .disabled(manualTaskName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(14)
+        .background(ScrapbookPanel(tint: ScrapbookPalette.whitePaper, rotation: -0.4))
     }
 
     private var endSessionForm: some View {
@@ -411,6 +487,56 @@ struct TimeInvestmentMenuBarView: View {
         meaningScore = 6
         note = ""
         endedAt = Date()
+    }
+
+    private func prepareManualSession() {
+        let now = Date()
+        manualStartAt = now.addingTimeInterval(-3_600)
+        manualEndAt = now
+        manualTaskName = ""
+        manualCategory = .other
+        manualJoyScore = 6
+        manualMeaningScore = 6
+        manualNote = ""
+    }
+
+    private func saveManualSession() {
+        let startAt = manualStartAt
+        let endAt = manualEndAtOnStartDay(startAt: startAt)
+        let draft = SessionDraftResult(
+            taskName: manualTaskName,
+            category: manualCategory,
+            joyScore: Int(manualJoyScore),
+            meaningScore: Int(manualMeaningScore),
+            note: manualNote
+        )
+
+        viewModel.addManualSession(startAt: startAt, endAt: endAt, draft: draft)
+        resetManualDraft()
+    }
+
+    private func manualEndAtOnStartDay(startAt: Date) -> Date {
+        let calendar = Calendar.current
+        let endComponents = calendar.dateComponents([.hour, .minute], from: manualEndAt)
+        var startDayComponents = calendar.dateComponents([.year, .month, .day], from: startAt)
+        startDayComponents.hour = endComponents.hour
+        startDayComponents.minute = endComponents.minute
+        let endAt = calendar.date(from: startDayComponents) ?? manualEndAt
+
+        if endAt <= startAt {
+            return calendar.date(byAdding: .day, value: 1, to: endAt) ?? endAt
+        }
+
+        return endAt
+    }
+
+    private func resetManualDraft() {
+        isAddingManualSession = false
+        manualTaskName = ""
+        manualCategory = .other
+        manualJoyScore = 6
+        manualMeaningScore = 6
+        manualNote = ""
     }
 
     private func todaySlots() -> [TimeSessionCategory?] {
@@ -682,6 +808,56 @@ private struct ScrapbookDateStepper: View {
 
     private func shiftDay(_ value: Int) {
         date = Calendar.current.date(byAdding: .day, value: value, to: date) ?? date
+    }
+}
+
+private struct ScrapbookTimeStepper: View {
+    let title: String
+    @Binding var date: Date
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(ScrapbookPalette.ink)
+
+            Button {
+                shiftMinutes(-15)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.caption2.weight(.bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(ScrapbookPalette.ink)
+
+            Text(date.formatted(date: .omitted, time: .shortened))
+                .font(.caption.monospacedDigit().weight(.bold))
+                .foregroundStyle(ScrapbookPalette.ink)
+                .frame(minWidth: 48)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(ScrapbookPalette.whitePaper.opacity(0.86))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(ScrapbookPalette.ink.opacity(0.38), lineWidth: 1.2)
+                        }
+                }
+
+            Button {
+                shiftMinutes(15)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.caption2.weight(.bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(ScrapbookPalette.ink)
+        }
+    }
+
+    private func shiftMinutes(_ value: Int) {
+        date = Calendar.current.date(byAdding: .minute, value: value, to: date) ?? date
     }
 }
 

@@ -213,6 +213,36 @@ final class TimeSessionStoreTests: XCTestCase {
         ])
     }
 
+    @MainActor
+    func testViewModelAddsManualSession() {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let viewModel = TimeInvestmentViewModel(
+            store: InMemoryTimeSessionStore(seedSessions: []),
+            timer: SessionTimer(),
+            referenceDurationSeconds: 1_500
+        )
+
+        viewModel.addManualSession(
+            startAt: day.addingTimeInterval(9 * 3_600),
+            endAt: day.addingTimeInterval(10 * 3_600 + 20 * 60),
+            draft: SessionDraftResult(
+                taskName: "补录学习",
+                category: .studyWork,
+                joyScore: 7,
+                meaningScore: 9,
+                note: "忘记点击开始"
+            )
+        )
+
+        let sessions = viewModel.sessions(on: day, calendar: calendar)
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].taskName, "补录学习")
+        XCTAssertEqual(sessions[0].roundedSeconds, 75 * 60)
+        XCTAssertEqual(sessions[0].note, "忘记点击开始")
+    }
+
     func testExportFormatterIncludesReadableContextAndJSONLines() {
         let calendar = Calendar(identifier: .gregorian)
         let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))

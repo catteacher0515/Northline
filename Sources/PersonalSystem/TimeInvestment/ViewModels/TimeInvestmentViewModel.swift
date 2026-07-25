@@ -188,6 +188,21 @@ final class TimeInvestmentViewModel: ObservableObject {
         objectWillChange.send()
     }
 
+    func addManualSession(startAt: Date, endAt: Date, draft: SessionDraftResult) {
+        let orderedStart = min(startAt, endAt)
+        let orderedEnd = max(startAt, endAt)
+        let session = draft
+            .makeSession(
+                startAt: orderedStart,
+                endAt: orderedEnd,
+                referenceDurationSeconds: timer.defaultReferenceDurationSeconds
+            )
+            .normalizedForPersistence()
+
+        store.append(session)
+        objectWillChange.send()
+    }
+
     func selectReviewRange(_ range: ReviewRange) {
         selectedReviewRange = range
     }
