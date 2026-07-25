@@ -22,7 +22,7 @@ struct PersonalSystemApp: App {
         .windowResizability(.contentSize)
 
         MenuBarExtra {
-            TimeInvestmentMenuBarView(viewModel: appState.timeInvestmentViewModel)
+            TimeInvestmentMenuBarView(viewModel: appState.timeInvestmentViewModel, viewMode: .constant(.record))
         } label: {
             TimeInvestmentMenuBarLabel(viewModel: appState.timeInvestmentViewModel)
         }

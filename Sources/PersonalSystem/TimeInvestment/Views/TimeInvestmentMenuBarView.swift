@@ -1,7 +1,13 @@
 import SwiftUI
 
+enum TimeMateViewMode {
+    case record
+    case review
+}
+
 struct TimeInvestmentMenuBarView: View {
     @ObservedObject var viewModel: TimeInvestmentViewModel
+    @Binding var viewMode: TimeMateViewMode
 
     @State private var isEndingSession = false
     @State private var endedAt = Date()
@@ -10,11 +16,36 @@ struct TimeInvestmentMenuBarView: View {
     @State private var joyScore = 6.0
     @State private var meaningScore = 6.0
     @State private var note = ""
-    @State private var recordScope: RecordScope = .today
+    @State private var reviewScope: ReviewScope = .day
+    @State private var selectedDay = Date()
+    @State private var customStartDate = Calendar.current.date(byAdding: .day, value: -6, to: Date()) ?? Date()
+    @State private var customEndDate = Date()
 
     var body: some View {
+        Group {
+            switch viewMode {
+            case .record:
+                recordPage
+                    .frame(width: 360)
+            case .review:
+                reviewPage
+                    .frame(width: 700)
+            }
+        }
+        .padding(16)
+        .onChange(of: viewModel.isSessionRunning) { _, isRunning in
+            if isRunning == false {
+                resetDraft()
+            }
+        }
+        .onChange(of: taskName) { _, newValue in
+            selectedCategory = TimeSessionCategory.classify(taskName: newValue)
+        }
+    }
+
+    private var recordPage: some View {
         VStack(alignment: .leading, spacing: 14) {
-            header
+            header(showReviewButton: true)
 
             if viewModel.isSessionRunning {
                 if isEndingSession {
@@ -27,33 +58,30 @@ struct TimeInvestmentMenuBarView: View {
             }
 
             todayTimeline
-            recordReview
+            recentConfirmation
 
             Text("快捷键可在 Time Mate 设置中调整。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
-        .padding(16)
-        .frame(width: 360)
-        .onChange(of: viewModel.isSessionRunning) { _, isRunning in
-            if isRunning == false {
-                resetDraft()
-            }
-        }
-        .onChange(of: taskName) { _, newValue in
-            selectedCategory = TimeSessionCategory.classify(taskName: newValue)
-        }
     }
 
-    private var header: some View {
+    private func header(showReviewButton: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Time Mate")
                     .font(.headline.weight(.semibold))
                 Spacer()
-                Text(Date().formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                if showReviewButton {
+                    Button("回顾") {
+                        viewMode = .review
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Text(Date().formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Text(viewModel.isSessionRunning ? "正在记录这段时间" : "点击开始，结束后再补任务")
@@ -176,39 +204,141 @@ struct TimeInvestmentMenuBarView: View {
         .background(MenuPanelBackground())
     }
 
-    private var recordReview: some View {
+    private var recentConfirmation: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("记录回顾")
+                Text("最近保存")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+            }
+
+            let records = viewModel.recentSessions(limit: 3)
+            if records.isEmpty {
+                Text("还没有记录。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    ForEach(records, id: \.id) { session in
+                        RecordRow(session: session, color: color(for: session.category))
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(MenuPanelBackground())
+    }
+
+    private var reviewPage: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("记录回顾")
+                        .font(.title2.weight(.semibold))
+                    Text("按天或按时间范围看过去的色块。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Spacer()
 
-                Picker("记录范围", selection: $recordScope) {
-                    ForEach(RecordScope.allCases) { scope in
-                        Text(scope.title).tag(scope)
-                    }
+                Button("返回记录") {
+                    viewMode = .record
                 }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .frame(width: 118)
+                .buttonStyle(.bordered)
             }
 
-            let records = reviewRecords()
+            reviewControls
+            reviewColorBlocks
+            reviewRecordList
+        }
+    }
+
+    private var reviewControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Picker("范围", selection: $reviewScope) {
+                ForEach(ReviewScope.allCases) { scope in
+                    Text(scope.title).tag(scope)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            switch reviewScope {
+            case .day:
+                DatePicker("选择日期", selection: $selectedDay, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+            case .last7Days:
+                Text("展示包含今天在内的最近 7 天。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            case .custom:
+                HStack {
+                    DatePicker("开始", selection: $customStartDate, displayedComponents: .date)
+                    DatePicker("结束", selection: $customEndDate, displayedComponents: .date)
+                }
+                .datePickerStyle(.compact)
+            }
+        }
+        .padding(12)
+        .background(MenuPanelBackground())
+    }
+
+    private var reviewColorBlocks: some View {
+        let rows = reviewDays()
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("色块")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("每格 15 min")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            if rows.isEmpty {
+                Text("这个范围还没有记录。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(rows, id: \.self) { day in
+                            DayBlockRow(
+                                day: day,
+                                slots: slots(for: day),
+                                colorForCategory: color(for:)
+                            )
+                        }
+                    }
+                }
+                .frame(height: colorBlockHeight(for: rows.count))
+            }
+        }
+        .padding(12)
+        .background(MenuPanelBackground())
+    }
+
+    private var reviewRecordList: some View {
+        let records = reviewRangeSessions()
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("记录明细")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
             if records.isEmpty {
-                Text(recordScope == .today ? "今天还没有记录。" : "还没有记录。")
+                Text("没有可展示的记录。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(records, id: \.id) { session in
-                            RecordRow(session: session, color: color(for: session.category))
+                            RecordRow(session: session, color: color(for: session.category), showsDate: reviewScope != .day)
                         }
                     }
                 }
-                .frame(maxHeight: 178)
+                .frame(maxHeight: 210)
             }
         }
         .padding(12)
@@ -236,21 +366,16 @@ struct TimeInvestmentMenuBarView: View {
         endedAt = Date()
     }
 
-    private func reviewRecords() -> [TimeSession] {
-        switch recordScope {
-        case .today:
-            return viewModel.todaySessions()
-        case .all:
-            return viewModel.recentSessions(limit: 30)
-        }
+    private func todaySlots() -> [TimeSessionCategory?] {
+        slots(for: Date())
     }
 
-    private func todaySlots() -> [TimeSessionCategory?] {
+    private func slots(for day: Date) -> [TimeSessionCategory?] {
         let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: Date())
+        let startOfDay = calendar.startOfDay(for: day)
         var slots = Array<TimeSessionCategory?>(repeating: nil, count: 96)
 
-        for session in viewModel.todaySessions() {
+        for session in viewModel.sessions(on: day) {
             let startMinutes = max(0, Int(session.startAt.timeIntervalSince(startOfDay) / 60))
             let startIndex = min(95, max(0, startMinutes / 15))
             let slotCount = max(1, session.roundedSeconds / (15 * 60))
@@ -266,6 +391,35 @@ struct TimeInvestmentMenuBarView: View {
         }
 
         return slots
+    }
+
+    private func reviewRangeSessions() -> [TimeSession] {
+        let interval = reviewDateBounds()
+        return viewModel.sessions(from: interval.start, to: interval.end)
+    }
+
+    private func reviewDays() -> [Date] {
+        let interval = reviewDateBounds()
+        return viewModel.days(from: interval.start, to: interval.end)
+    }
+
+    private func colorBlockHeight(for dayCount: Int) -> CGFloat {
+        min(260, max(34, CGFloat(dayCount) * 28))
+    }
+
+    private func reviewDateBounds() -> (start: Date, end: Date) {
+        let calendar = Calendar.current
+
+        switch reviewScope {
+        case .day:
+            return (selectedDay, selectedDay)
+        case .last7Days:
+            let today = calendar.startOfDay(for: Date())
+            let start = calendar.date(byAdding: .day, value: -6, to: today) ?? today
+            return (start, today)
+        case .custom:
+            return (customStartDate, customEndDate)
+        }
     }
 
     private func color(for category: TimeSessionCategory) -> Color {
@@ -291,18 +445,48 @@ private struct MenuPanelBackground: View {
     }
 }
 
-private enum RecordScope: String, CaseIterable, Identifiable {
-    case today
-    case all
+private enum ReviewScope: String, CaseIterable, Identifiable {
+    case day
+    case last7Days
+    case custom
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .today:
-            return "今日"
-        case .all:
-            return "全部"
+        case .day:
+            return "某一天"
+        case .last7Days:
+            return "最近 7 天"
+        case .custom:
+            return "自定义"
+        }
+    }
+}
+
+private struct DayBlockRow: View {
+    let day: Date
+    let slots: [TimeSessionCategory?]
+    let colorForCategory: (TimeSessionCategory) -> Color
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(day.formatted(.dateTime.month(.twoDigits).day(.twoDigits)))
+                    .font(.caption2.monospacedDigit().weight(.semibold))
+                Text(day.formatted(.dateTime.weekday(.abbreviated)))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 48, alignment: .leading)
+
+            HStack(spacing: 1) {
+                ForEach(slots.indices, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                        .fill(slots[index].map(colorForCategory) ?? Color.secondary.opacity(0.12))
+                        .frame(height: 18)
+                }
+            }
         }
     }
 }
@@ -310,6 +494,7 @@ private enum RecordScope: String, CaseIterable, Identifiable {
 private struct RecordRow: View {
     let session: TimeSession
     let color: Color
+    var showsDate = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -326,7 +511,7 @@ private struct RecordRow: View {
 
                     Spacer()
 
-                    Text(timeRange)
+                    Text(showsDate ? "\(dateText) \(timeRange)" : timeRange)
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -348,5 +533,9 @@ private struct RecordRow: View {
 
     private var timeRange: String {
         "\(session.startAt.formatted(date: .omitted, time: .shortened))-\(session.endAt.formatted(date: .omitted, time: .shortened))"
+    }
+
+    private var dateText: String {
+        session.startAt.formatted(.dateTime.month(.twoDigits).day(.twoDigits))
     }
 }

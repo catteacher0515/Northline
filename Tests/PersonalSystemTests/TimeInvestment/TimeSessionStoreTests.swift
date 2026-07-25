@@ -141,4 +141,75 @@ final class TimeSessionStoreTests: XCTestCase {
 
         XCTAssertEqual(result.map { $0.taskName }, ["学习"])
     }
+
+    @MainActor
+    func testViewModelReturnsSessionsInDateRange() {
+        let calendar = Calendar(identifier: .gregorian)
+        let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: startDay) ?? startDay
+        let afterRange = calendar.date(byAdding: .day, value: 2, to: startDay) ?? startDay
+
+        let first = TimeSession(
+            startAt: startDay.addingTimeInterval(9 * 3_600),
+            endAt: startDay.addingTimeInterval(10 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "学习",
+            category: .studyWork,
+            joyScore: 7,
+            meaningScore: 9,
+            note: nil,
+            endedByUser: true
+        )
+        let second = TimeSession(
+            startAt: nextDay.addingTimeInterval(8 * 3_600),
+            endAt: nextDay.addingTimeInterval(9 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "早餐",
+            category: .foodExercise,
+            joyScore: 7,
+            meaningScore: 6,
+            note: nil,
+            endedByUser: true
+        )
+        let third = TimeSession(
+            startAt: afterRange.addingTimeInterval(21 * 3_600),
+            endAt: afterRange.addingTimeInterval(22 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "刷视频",
+            category: .entertainment,
+            joyScore: 5,
+            meaningScore: 2,
+            note: nil,
+            endedByUser: true
+        )
+        let viewModel = TimeInvestmentViewModel(
+            store: InMemoryTimeSessionStore(seedSessions: [third, second, first]),
+            timer: SessionTimer(),
+            referenceDurationSeconds: 1_500
+        )
+
+        let result = viewModel.sessions(from: startDay, to: nextDay, calendar: calendar)
+
+        XCTAssertEqual(result.map { $0.taskName }, ["学习", "早餐"])
+    }
+
+    @MainActor
+    func testViewModelReturnsInclusiveDaysInRange() {
+        let calendar = Calendar(identifier: .gregorian)
+        let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let endDay = calendar.date(byAdding: .day, value: 2, to: startDay) ?? startDay
+        let viewModel = TimeInvestmentViewModel(
+            store: InMemoryTimeSessionStore(seedSessions: []),
+            timer: SessionTimer(),
+            referenceDurationSeconds: 1_500
+        )
+
+        let days = viewModel.days(from: startDay, to: endDay, calendar: calendar)
+
+        XCTAssertEqual(days, [
+            startDay,
+            calendar.date(byAdding: .day, value: 1, to: startDay),
+            endDay
+        ])
+    }
 }

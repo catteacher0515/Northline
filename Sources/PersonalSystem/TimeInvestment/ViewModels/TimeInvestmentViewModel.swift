@@ -105,6 +105,33 @@ final class TimeInvestmentViewModel: ObservableObject {
             .sorted { $0.startAt < $1.startAt }
     }
 
+    func sessions(from startDate: Date, to endDate: Date, calendar: Calendar = .current) -> [TimeSession] {
+        let startDay = calendar.startOfDay(for: min(startDate, endDate))
+        let endDay = calendar.startOfDay(for: max(startDate, endDate))
+        let exclusiveEnd = calendar.date(byAdding: .day, value: 1, to: endDay) ?? endDay
+
+        return store.allSessions()
+            .filter { $0.startAt >= startDay && $0.startAt < exclusiveEnd }
+            .sorted { $0.startAt < $1.startAt }
+    }
+
+    func days(from startDate: Date, to endDate: Date, calendar: Calendar = .current) -> [Date] {
+        let startDay = calendar.startOfDay(for: min(startDate, endDate))
+        let endDay = calendar.startOfDay(for: max(startDate, endDate))
+        var days: [Date] = []
+        var current = startDay
+
+        while current <= endDay {
+            days.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else {
+                break
+            }
+            current = next
+        }
+
+        return days
+    }
+
     func recentSessions(limit: Int = 3) -> [TimeSession] {
         Array(
             store.allSessions()
