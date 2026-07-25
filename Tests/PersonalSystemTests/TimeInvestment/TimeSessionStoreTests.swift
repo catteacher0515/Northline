@@ -212,4 +212,34 @@ final class TimeSessionStoreTests: XCTestCase {
             endDay
         ])
     }
+
+    func testExportFormatterIncludesReadableContextAndJSONLines() {
+        let calendar = Calendar(identifier: .gregorian)
+        let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let session = TimeSession(
+            startAt: startDay.addingTimeInterval(9 * 3_600),
+            endAt: startDay.addingTimeInterval(10 * 3_600),
+            referenceDurationSeconds: 1_500,
+            taskName: "学习",
+            category: .studyWork,
+            joyScore: 7,
+            meaningScore: 9,
+            note: "推进核心任务",
+            endedByUser: true
+        )
+
+        let export = TimeSessionExportFormatter.markdown(
+            sessions: [session],
+            startDate: startDay,
+            endDate: startDay,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(export.contains("# Time Mate 时间记录导出"))
+        XCTAssertTrue(export.contains("字段说明"))
+        XCTAssertTrue(export.contains("\"task_name\":\"学习\""))
+        XCTAssertTrue(export.contains("\"category\":\"学习/工作\""))
+        XCTAssertTrue(export.contains("\"rounded_minutes\":60"))
+        XCTAssertTrue(export.contains("\"note\":\"推进核心任务\""))
+    }
 }

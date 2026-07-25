@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum TimeMateViewMode {
@@ -20,6 +21,7 @@ struct TimeInvestmentMenuBarView: View {
     @State private var selectedDay = Date()
     @State private var customStartDate = Calendar.current.date(byAdding: .day, value: -6, to: Date()) ?? Date()
     @State private var customEndDate = Date()
+    @State private var exportStatusText = ""
 
     var body: some View {
         Group {
@@ -242,6 +244,11 @@ struct TimeInvestmentMenuBarView: View {
 
                 Spacer()
 
+                Button(exportStatusText.isEmpty ? "复制导出" : exportStatusText) {
+                    copyReviewExport()
+                }
+                .buttonStyle(.borderedProminent)
+
                 Button("返回记录") {
                     viewMode = .record
                 }
@@ -396,6 +403,22 @@ struct TimeInvestmentMenuBarView: View {
     private func reviewRangeSessions() -> [TimeSession] {
         let interval = reviewDateBounds()
         return viewModel.sessions(from: interval.start, to: interval.end)
+    }
+
+    private func copyReviewExport() {
+        let interval = reviewDateBounds()
+        let exportText = TimeSessionExportFormatter.markdown(
+            sessions: viewModel.sessions(from: interval.start, to: interval.end),
+            startDate: interval.start,
+            endDate: interval.end
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(exportText, forType: .string)
+        exportStatusText = "已复制"
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            exportStatusText = ""
+        }
     }
 
     private func reviewDays() -> [Date] {
