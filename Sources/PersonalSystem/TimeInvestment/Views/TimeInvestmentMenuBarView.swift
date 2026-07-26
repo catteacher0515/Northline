@@ -263,9 +263,9 @@ struct TimeInvestmentMenuBarView: View {
             HStack {
                 Button {
                     TimeMateInteractionSound.cancel.play()
-                    resetDraft()
+                    discardEndedSession()
                 } label: {
-                    Text("放弃")
+                    Text("放弃本次")
                         .scrapbookButtonLabel(tint: ScrapbookPalette.whitePaper)
                 }
                 .buttonStyle(.plain)
@@ -536,6 +536,11 @@ struct TimeInvestmentMenuBarView: View {
             note: note
         )
         viewModel.completeSession(using: draft, now: endedAt)
+    }
+
+    private func discardEndedSession() {
+        viewModel.discardCurrentSession(now: endedAt)
+        resetDraft()
     }
 
     private func resetDraft() {

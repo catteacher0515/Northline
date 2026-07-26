@@ -188,6 +188,14 @@ final class TimeInvestmentViewModel: ObservableObject {
         objectWillChange.send()
     }
 
+    func discardCurrentSession(now: Date = Date()) {
+        _ = timer.stop(at: now)
+        clearPersistedActiveSession()
+        isPresentingEndSessionSheet = false
+        isSessionRunning = timer.isRunning
+        objectWillChange.send()
+    }
+
     func addManualSession(startAt: Date, endAt: Date, draft: SessionDraftResult) {
         let orderedStart = min(startAt, endAt)
         let orderedEnd = max(startAt, endAt)

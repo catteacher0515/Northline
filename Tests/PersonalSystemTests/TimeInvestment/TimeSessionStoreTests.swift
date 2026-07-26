@@ -243,6 +243,24 @@ final class TimeSessionStoreTests: XCTestCase {
         XCTAssertEqual(sessions[0].note, "忘记点击开始")
     }
 
+    @MainActor
+    func testViewModelDiscardsCurrentSessionWithoutSaving() {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
+        let viewModel = TimeInvestmentViewModel(
+            store: InMemoryTimeSessionStore(seedSessions: []),
+            timer: SessionTimer(),
+            referenceDurationSeconds: 1_500
+        )
+
+        viewModel.startSession(now: day.addingTimeInterval(6 * 3_600))
+        viewModel.discardCurrentSession(now: day.addingTimeInterval(7 * 3_600))
+
+        XCTAssertFalse(viewModel.isSessionRunning)
+        XCTAssertTrue(viewModel.sessions(on: day, calendar: calendar).isEmpty)
+        XCTAssertEqual(viewModel.elapsedSeconds(now: day.addingTimeInterval(8 * 3_600)), 0)
+    }
+
     func testExportFormatterIncludesReadableContextAndJSONLines() {
         let calendar = Calendar(identifier: .gregorian)
         let startDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_718_000_000))
